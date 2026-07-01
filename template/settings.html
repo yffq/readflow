@@ -1,0 +1,79 @@
+{{define "page_settings"}}{{template "header" .}}
+<div class="settings-page">
+    <h1>Settings</h1>
+    {{if .NewAPIKey}}
+    <div class="api-key-reveal">
+        <h3>New API Key Created</h3>
+        <p>Copy this key now. You won't be able to see it again.</p>
+        <code class="key-display" onclick="copyKey(this)">{{.NewAPIKey}}</code>
+        <p class="help-text">Use with: <code>Authorization: Bearer {{.NewAPIKey}}</code></p>
+        <p class="help-text">Click the key to copy it.</p>
+    </div>
+    {{end}}
+    <div class="settings-section">
+        <h2>API Keys</h2>
+        <p class="help-text">API keys allow external tools (Chrome extension, Hermes agent) to access Readflow.</p>
+        <form method="POST" action="/generate-key" class="key-form">
+            <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+            <input type="text" name="name" placeholder="Key name (e.g., Chrome, Hermes)" required>
+            <button type="submit" class="btn-primary">Generate New Key</button>
+        </form>
+        {{if .APIKeys}}
+        <table class="key-table">
+            <thead><tr><th>Name</th><th>Prefix</th><th>Created</th><th>Last Used</th><th></th></tr></thead>
+            <tbody>
+                {{range .APIKeys}}
+                <tr>
+                    <td>{{.Name}}</td>
+                    <td><code>{{.KeyPrefix}}...</code></td>
+                    <td>{{.CreatedAt}}</td>
+                    <td>{{if .LastUsed.Valid}}{{.LastUsed.Time.Format "Jan 02, 2006"}}{{else}}Never{{end}}</td>
+                    <td>
+                        <form method="POST" action="/delete-key/{{.ID}}" class="inline" onsubmit="return confirm('Delete this key?')">
+                            <input type="hidden" name="csrf_token" value="{{$.CSRFToken}}">
+                            <button class="btn-sm btn-danger">Delete</button>
+                        </form>
+                    </td>
+                </tr>
+                {{end}}
+            </tbody>
+        </table>
+        {{end}}
+    </div>
+    <div class="settings-section">
+        <h2>API Usage</h2>
+        <div class="api-doc">
+            <h3>Save Article</h3>
+            <pre><code>POST /api/v1/save
+Authorization: Bearer YOUR_API_KEY
+Content-Type: application/json
+
+{"url": "https://example.com/article", "html": "&lt;p&gt;Full article...&lt;/p&gt;", "title": "Title"}</code></pre>
+            <h3>Export Articles</h3>
+            <pre><code>GET /api/v1/export?updated_after=2024-01-01T00:00:00Z&limit=100
+Authorization: Bearer YOUR_API_KEY</code></pre>
+            <h3>Response</h3>
+            <pre><code>{
+  "count": 42,
+  "next": "/api/v1/export?...",
+  "results": [{
+    "id": "...", "title": "...", "url": "...",
+    "content_markdown": "# Title\n\nContent...",
+    "author": "...", "word_count": 1234,
+    "source": "url", "status": "unread",
+    "saved_at": "2024-01-01T00:00:00Z",
+    "updated_at": "2024-01-01T00:00:00Z"
+  }]
+}</code></pre>
+        </div>
+    </div>
+</div>
+<script>
+function copyKey(el) {
+    navigator.clipboard.writeText(el.textContent).then(() => {
+        el.classList.add('copied');
+        setTimeout(() => el.classList.remove('copied'), 2000);
+    });
+}
+</script>
+{{template "footer" .}}{{end}}

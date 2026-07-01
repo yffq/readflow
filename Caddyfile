@@ -1,0 +1,5 @@
+# 改成你的域名
+your-domain.com {
+    reverse_proxy readflow:8080
+    encode gzip
+}

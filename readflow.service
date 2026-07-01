@@ -1,0 +1,40 @@
+# readflow.service — systemd unit for Linux deployment
+# 
+# Installation:
+#   sudo cp readflow.service /etc/systemd/system/
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable --now readflow
+#
+# Binary deployment (non-Docker):
+#   1. Build on macOS:  make build-linux-amd64
+#   2. Copy to server:  scp bin/readflow-linux-amd64 user@server:/opt/readflow/readflow
+#   3. Copy templates:  scp -r template/ static/ migrations/ user@server:/opt/readflow/
+#   4. SSH to server and install this unit file
+#
+# Assumes:
+#   - Binary at /opt/readflow/readflow
+#   - Templates at /opt/readflow/template/
+#   - Static files at /opt/readflow/static/
+#   - Migrations at /opt/readflow/migrations/
+#   - Data directory at /opt/readflow/data/ (auto-created)
+#   - Caddy or nginx as reverse proxy on port 443 → localhost:8080
+
+[Unit]
+Description=Readflow — Self-hosted read-later service
+After=network.target
+
+[Service]
+Type=simple
+User=www-data
+Group=www-data
+WorkingDirectory=/opt/readflow
+Environment=PORT=8080
+Environment=READFLOW_DB_PATH=/opt/readflow/data/readflow.db
+Environment=READFLOW_ENV=production
+ExecStart=/opt/readflow/readflow
+Restart=always
+RestartSec=5
+LimitNOFILE=65536
+
+[Install]
+WantedBy=multi-user.target

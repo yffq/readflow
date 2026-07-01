@@ -1,0 +1,14 @@
+{{define "page_login"}}{{template "header" .}}
+<div class="auth-page">
+    <div class="auth-card">
+        <h1>Login</h1>
+        <form method="POST" action="/login" class="auth-form">
+            <label>Password
+                <input type="password" name="password" placeholder="Enter your password" required autofocus>
+            </label>
+            <button type="submit" class="btn-primary">Login</button>
+        </form>
+        {{if .Error}}<p class="error">{{.Error}}</p>{{end}}
+    </div>
+</div>
+{{template "footer" .}}{{end}}

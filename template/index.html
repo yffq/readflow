@@ -1,0 +1,60 @@
+{{define "page_index"}}{{template "header" .}}
+<div class="inbox">
+    <div class="inbox-header">
+        <h1>{{if eq .Status "archived"}}Archived{{else}}Inbox{{end}}</h1>
+        <span class="count">{{.Total}} articles</span>
+    </div>
+
+    {{if .Articles}}
+    <div class="article-list">
+        {{range .Articles}}
+        <div class="article-card">
+            <div class="article-card-main">
+                <a href="/read/{{.ID}}" class="article-title">{{.Title}}</a>
+                <div class="article-meta">
+                    {{if .SiteName}}<span class="site-name">{{.SiteName}}</span>{{end}}
+                    {{if .Author}}<span class="author">by {{.Author}}</span>{{end}}
+                    <span class="time">{{.CreatedAt.Format "Jan 02, 2006"}}</span>
+                    {{if .WordCount}}<span class="words">{{.WordCount}} words</span>{{end}}
+                    {{if .ExtractionFailed}}<span class="badge badge-warn">extraction failed</span>{{end}}
+                </div>
+            </div>
+            <div class="article-card-actions">
+                {{if eq .Status "unread"}}
+                <form method="POST" action="/archive/{{.ID}}" class="inline">
+                    <input type="hidden" name="csrf_token" value="{{$.CSRFToken}}">
+                    <button class="btn-sm">Archive</button>
+                </form>
+                {{else}}
+                <form method="POST" action="/unread/{{.ID}}" class="inline">
+                    <input type="hidden" name="csrf_token" value="{{$.CSRFToken}}">
+                    <button class="btn-sm">Unarchive</button>
+                </form>
+                {{end}}
+                <form method="POST" action="/delete/{{.ID}}" class="inline" onsubmit="return confirm('Delete this article?')">
+                    <input type="hidden" name="csrf_token" value="{{$.CSRFToken}}">
+                    <button class="btn-sm btn-danger">Delete</button>
+                </form>
+            </div>
+        </div>
+        {{end}}
+    </div>
+
+    {{if gt .Total .Limit}}
+    <div class="pagination">
+        {{if gt .Page 1}}
+        <a href="/?status={{.Status}}&page={{subtract .Page 1}}" class="btn-sm">&larr; Previous</a>
+        {{end}}
+        {{if gt .Total (multiply .Page .Limit)}}
+        <a href="/?status={{.Status}}&page={{add .Page 1}}" class="btn-sm">Next &rarr;</a>
+        {{end}}
+    </div>
+    {{end}}
+    {{else}}
+    <div class="empty-state">
+        <p>No articles yet. Start by saving something to read.</p>
+        <a href="/save" class="btn-primary">Save your first article</a>
+    </div>
+    {{end}}
+</div>
+{{template "footer" .}}{{end}}

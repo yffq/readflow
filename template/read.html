@@ -1,0 +1,51 @@
+{{define "page_read"}}{{template "header" .}}
+<div class="reading-view">
+    <div class="reading-header">
+        <a href="/" class="back-link">&larr; Back</a>
+        <div class="reading-actions">
+            <form method="POST" action="/archive/{{.Article.ID}}" class="inline">
+                <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+                <button class="btn-sm">{{if eq .Article.Status "archived"}}Unarchive{{else}}Archive{{end}}</button>
+            </form>
+            <form method="POST" action="/delete/{{.Article.ID}}" class="inline" onsubmit="return confirm('Delete this article?')">
+                <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+                <button class="btn-sm btn-danger">Delete</button>
+            </form>
+        </div>
+    </div>
+
+    <article class="article-body">
+        <h1 class="article-title">{{.Article.Title}}</h1>
+        <div class="article-byline">
+            {{if .Article.Author}}<span class="author">{{.Article.Author}}</span>{{end}}
+            {{if .Article.SiteName}}<span class="site">{{.Article.SiteName}}</span>{{end}}
+            <span class="time">{{.RelTime}}</span>
+            <span class="reading-time">{{.ReadTime}} read</span>
+        </div>
+
+        {{if .Article.ExtractionFailed}}
+        <div class="extraction-failed">
+            <div class="ef-card">
+                <h2>Content Not Available</h2>
+                <p>Readflow could not extract the content of this page. The article may require login or block automated access.</p>
+                <div class="ef-info">
+                    <div><strong>URL:</strong> <code>{{.Article.URL}}</code></div>
+                </div>
+                <div class="ef-actions">
+                    <a href="{{.Article.URL}}" target="_blank" rel="noopener" class="btn-primary">Open Original</a>
+                    <a href="/read/{{.Article.ID}}/iframe" class="btn-secondary">Open in Frame</a>
+                </div>
+            </div>
+        </div>
+        {{else}}
+        <div class="article-content">{{safeHTML .Article.ContentHTML}}</div>
+        {{end}}
+    </article>
+</div>
+
+<div id="link-menu" class="link-menu hidden">
+    <button class="lm-save">📥 Save to Read Later</button>
+    <button class="lm-open">🔗 Open in New Tab</button>
+</div>
+<div id="toast" class="toast hidden"></div>
+{{template "footer" .}}{{end}}

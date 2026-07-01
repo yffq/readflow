@@ -1,0 +1,31 @@
+{{define "page_save"}}{{template "header" .}}
+<div class="save-page">
+    <h1>Save Article</h1>
+    {{if .Error}}<div class="flash error">{{.Error}}</div>{{end}}
+    <div class="save-methods">
+        <form method="POST" action="/save" class="save-form">
+            <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+            <div class="save-section">
+                <h2>Save Link</h2>
+                <label>URL
+                    <input type="url" name="url" placeholder="https://example.com/article" autocomplete="off">
+                </label>
+                <button type="submit" name="action" value="url" class="btn-primary">Save URL</button>
+                <p class="help-text">The article's content will be extracted automatically.</p>
+            </div>
+            <hr class="divider">
+            <div class="save-section">
+                <h2>Paste Full Article</h2>
+                <label>Title
+                    <input type="text" name="title" placeholder="Article title (optional)">
+                </label>
+                <label>Article HTML
+                    <textarea name="article_html" rows="12" placeholder="Paste the full article here... (HTML supported)"></textarea>
+                </label>
+                <button type="submit" name="action" value="html" class="btn-primary">Save Article</button>
+                <p class="help-text">Links in the article will be highlighted. Click them to save linked pages for later.</p>
+            </div>
+        </form>
+    </div>
+</div>
+{{template "footer" .}}{{end}}

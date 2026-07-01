@@ -1,0 +1,15 @@
+{{define "page_setup"}}{{template "header" .}}
+<div class="auth-page">
+    <div class="auth-card">
+        <h1>Welcome to Readflow</h1>
+        <p>Create your account to get started.</p>
+        <form method="POST" action="/setup" class="auth-form">
+            <label>Password
+                <input type="password" name="password" placeholder="At least 4 characters" required minlength="4" autofocus>
+            </label>
+            <button type="submit" class="btn-primary">Create Account</button>
+        </form>
+        {{if .Error}}<p class="error">{{.Error}}</p>{{end}}
+    </div>
+</div>
+{{template "footer" .}}{{end}}

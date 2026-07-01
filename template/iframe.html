@@ -1,0 +1,9 @@
+{{define "page_iframe"}}{{template "header" .}}
+<div class="iframe-wrapper">
+    <div class="iframe-header">
+        <a href="javascript:history.back()" class="back-link">&larr; Back</a>
+        <a href="{{.URL}}" target="_blank" rel="noopener" class="btn-secondary">Open in New Tab</a>
+    </div>
+    <iframe src="{{.URL}}" class="article-iframe" sandbox="allow-scripts allow-same-origin"></iframe>
+</div>
+{{template "footer" .}}{{end}}
