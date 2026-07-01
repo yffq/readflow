@@ -292,6 +292,54 @@ body {
     flex-shrink: 0;
 }
 
+/* Batch selection */
+.batch-bar {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 16px;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    margin-bottom: 12px;
+    flex-wrap: wrap;
+}
+
+.select-all-label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    cursor: pointer;
+    user-select: none;
+}
+
+.article-checkbox {
+    width: 16px;
+    height: 16px;
+    cursor: pointer;
+    accent-color: var(--primary);
+    flex-shrink: 0;
+}
+
+.select-all-label .article-checkbox {
+    margin: 0;
+}
+
+.article-checkbox-wrap {
+    display: flex;
+    align-items: center;
+    flex-shrink: 0;
+    padding: 2px;
+}
+
+.selected-count {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    flex-shrink: 0;
+}
+
 .badge {
     padding: 2px 6px;
     border-radius: 4px;

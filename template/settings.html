@@ -52,6 +52,12 @@ Content-Type: application/json
             <h3>Export Articles</h3>
             <pre><code>GET /api/v1/export?updated_after=2024-01-01T00:00:00Z&limit=100
 Authorization: Bearer YOUR_API_KEY</code></pre>
+            <h3>Delete Articles</h3>
+            <pre><code>POST /api/v1/delete
+Authorization: Bearer YOUR_API_KEY
+Content-Type: application/json
+
+{"ids": ["article-id-1", "article-id-2"]}</code></pre>
             <h3>Response</h3>
             <pre><code>{
   "count": 42,

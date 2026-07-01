@@ -88,6 +88,7 @@ func New(dbPath string) (*Server, error) {
 			r.Post("/delete-key/{id}", h.DeleteAPIKey)
 			r.Post("/archive/{id}", h.ArchiveArticle)
 			r.Post("/delete/{id}", h.DeleteArticle)
+			r.Post("/delete-batch", h.DeleteArticles)
 			r.Post("/unread/{id}", h.UnreadArticle)
 		})
 	})
@@ -98,6 +99,7 @@ func New(dbPath string) (*Server, error) {
 
 		r.Post("/save", h.APISave)
 		r.Get("/export", h.APIExport)
+		r.Post("/delete", h.APIDeleteArticles)
 	})
 
 	port := os.Getenv("PORT")

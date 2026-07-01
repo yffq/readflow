@@ -52,6 +52,11 @@ func (h *Handler) render(w http.ResponseWriter, r *http.Request, tmplName string
 		b := make([]byte, 32)
 		rand.Read(b)
 		token = hex.EncodeToString(b)
+		func() {
+			defer func() { recover() }()
+			h.SM.Put(r.Context(), "csrf_token", token)
+			h.SM.Commit(r.Context())
+		}()
 	}
 	data["CSRFToken"] = token
 	if err := h.Templates.ExecuteTemplate(w, tmplName, data); err != nil {
@@ -333,6 +338,57 @@ func (h *Handler) DeleteArticle(w http.ResponseWriter, r *http.Request) {
 	id := r.PathValue("id")
 	h.Store.DeleteArticle(id)
 	http.Redirect(w, r, "/", http.StatusSeeOther)
+}
+
+type deleteBatchRequest struct {
+	IDs       []string `json:"ids"`
+	CSRFToken string   `json:"csrf_token"`
+}
+
+func (h *Handler) DeleteArticles(w http.ResponseWriter, r *http.Request) {
+	sessionToken := h.getSessionString(r.Context(), "csrf_token")
+
+	var req deleteBatchRequest
+	if err := decodeJSON(r, &req); err != nil {
+		h.jsonError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+
+	if sessionToken == "" || req.CSRFToken != sessionToken {
+		h.jsonError(w, http.StatusForbidden, "invalid csrf token")
+		return
+	}
+
+	if len(req.IDs) == 0 {
+		h.jsonError(w, http.StatusBadRequest, "no article ids provided")
+		return
+	}
+
+	if err := h.Store.DeleteArticles(req.IDs); err != nil {
+		h.jsonError(w, http.StatusInternalServerError, "failed to delete articles")
+		return
+	}
+
+	writeJSON(w, http.StatusOK, map[string]any{"deleted": len(req.IDs)})
+}
+
+func (h *Handler) APIDeleteArticles(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		IDs []string `json:"ids"`
+	}
+	if err := decodeJSON(r, &req); err != nil {
+		h.jsonError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+	if len(req.IDs) == 0 {
+		h.jsonError(w, http.StatusBadRequest, "no article ids provided")
+		return
+	}
+	if err := h.Store.DeleteArticles(req.IDs); err != nil {
+		h.jsonError(w, http.StatusInternalServerError, "failed to delete articles")
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"deleted": len(req.IDs)})
 }
 
 func (h *Handler) UnreadArticle(w http.ResponseWriter, r *http.Request) {

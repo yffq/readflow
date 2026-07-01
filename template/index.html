@@ -6,9 +6,22 @@
     </div>
 
     {{if .Articles}}
+    <div class="batch-bar hidden" id="batch-bar">
+        <label class="select-all-label">
+            <input type="checkbox" id="select-all" class="article-checkbox">
+            <span>Select All</span>
+        </label>
+        <span class="selected-count" id="selected-count">0 selected</span>
+        <button class="btn-sm btn-danger" id="batch-delete-btn" disabled onclick="batchDelete()">Delete Selected</button>
+        <button class="btn-sm" id="cancel-select-btn" onclick="cancelSelection()">Cancel</button>
+    </div>
+
     <div class="article-list">
         {{range .Articles}}
         <div class="article-card">
+            <label class="article-checkbox-wrap">
+                <input type="checkbox" class="article-checkbox" value="{{.ID}}" data-article-id="{{.ID}}">
+            </label>
             <div class="article-card-main">
                 <a href="/read/{{.ID}}" class="article-title">{{.Title}}</a>
                 <div class="article-meta">
@@ -57,4 +70,7 @@
     </div>
     {{end}}
 </div>
-{{template "footer" .}}{{end}}
+{{template "footer" .}}
+<script>
+var csrfToken = {{.CSRFToken}};
+</script>{{end}}

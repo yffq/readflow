@@ -34,7 +34,6 @@
     setTimeout(() => menuTargetUrl = url, 0);
   }
 
-  // Attach to links inside article-content
   var content = document.querySelector('.article-content');
   if (content) {
     content.addEventListener('click', function (e) {
@@ -48,7 +47,6 @@
     });
   }
 
-  // Menu button handlers
   if (linkMenu) {
     linkMenu.querySelector('.lm-save').addEventListener('click', function () {
       var url = menuTargetUrl;
@@ -74,7 +72,7 @@
           if (data.error) {
             showToast('Error: ' + data.error);
           } else {
-            showToast('✓ Saved to Read Later');
+            showToast('Saved to Read Later');
           }
         })
         .catch(() => showToast('Failed to save. Check your connection.'));
@@ -87,22 +85,19 @@
     });
   }
 
-  // Close menu on outside click
   document.addEventListener('click', function (e) {
     if (linkMenu && !linkMenu.classList.contains('hidden')) {
       if (!linkMenu.contains(e.target) && !e.target.closest('.article-content a')) {
         hideLinkMenu();
       }
-    }
+    });
   });
 
-  // Escape key closes menu
   document.addEventListener('keydown', function (e) {
     if (e.key === 'Escape') hideLinkMenu();
   });
 
   function getApiKey() {
-    // Try to find a stored key. For now, prompt or check sessionStorage.
     var key = sessionStorage.getItem('readflow_api_key');
     if (!key) {
       key = prompt('Enter your Readflow API key (from Settings page):');
@@ -110,4 +105,83 @@
     }
     return key;
   }
+
+  // --- Batch selection ---
+  var selectAll = document.getElementById('select-all');
+  var batchBar = document.getElementById('batch-bar');
+  var selectedCount = document.getElementById('selected-count');
+  var batchDeleteBtn = document.getElementById('batch-delete-btn');
+
+  function updateBatchUI() {
+    var checked = document.querySelectorAll('.article-checkbox[data-article-id]:checked');
+    var count = checked.length;
+    if (count > 0) {
+      batchBar.classList.remove('hidden');
+      selectedCount.textContent = count + ' selected';
+      batchDeleteBtn.disabled = false;
+      if (selectAll) selectAll.indeterminate = false;
+    } else {
+      batchBar.classList.add('hidden');
+      selectedCount.textContent = '0 selected';
+      batchDeleteBtn.disabled = true;
+    }
+  }
+
+  if (selectAll) {
+    selectAll.addEventListener('change', function () {
+      var checkboxes = document.querySelectorAll('.article-checkbox[data-article-id]');
+      checkboxes.forEach(function (cb) { cb.checked = selectAll.checked; });
+      updateBatchUI();
+    });
+  }
+
+  document.querySelectorAll('.article-checkbox[data-article-id]').forEach(function (cb) {
+    cb.addEventListener('change', function () {
+      var checkboxes = document.querySelectorAll('.article-checkbox[data-article-id]');
+      var checked = document.querySelectorAll('.article-checkbox[data-article-id]:checked');
+      if (selectAll) {
+        selectAll.checked = checked.length === checkboxes.length;
+        selectAll.indeterminate = checked.length > 0 && checked.length < checkboxes.length;
+      }
+      updateBatchUI();
+    });
+  });
+
+  window.batchDelete = function () {
+    var checked = document.querySelectorAll('.article-checkbox[data-article-id]:checked');
+    if (checked.length === 0) return;
+    if (!confirm('Delete ' + checked.length + ' article(s)? This cannot be undone.')) return;
+
+    var ids = [];
+    checked.forEach(function (cb) { ids.push(cb.value); });
+
+    fetch('/delete-batch', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ids: ids, csrf_token: csrfToken })
+    })
+      .then(function (res) {
+        if (res.ok) {
+          location.reload();
+        } else {
+          showToast('Failed to delete articles.');
+        }
+      })
+      .catch(function () { showToast('Failed to delete articles.'); });
+  };
+
+  window.cancelSelection = function () {
+    document.querySelectorAll('.article-checkbox[data-article-id]').forEach(function (cb) {
+      cb.checked = false;
+    });
+    if (selectAll) selectAll.checked = false;
+    updateBatchUI();
+  };
+
+  // Clicking article link should not toggle checkbox
+  document.querySelectorAll('.article-title').forEach(function (link) {
+    link.addEventListener('click', function (e) {
+      e.stopPropagation();
+    });
+  });
 })();

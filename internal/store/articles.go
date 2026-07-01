@@ -92,6 +92,22 @@ func (s *Store) DeleteArticle(id string) error {
 	return err
 }
 
+func (s *Store) DeleteArticles(ids []string) error {
+	if len(ids) == 0 {
+		return nil
+	}
+	placeholders := make([]byte, 0, len(ids)*2)
+	args := make([]interface{}, len(ids))
+	placeholders = append(placeholders, '?')
+	args[0] = ids[0]
+	for i := 1; i < len(ids); i++ {
+		placeholders = append(placeholders, ',', '?')
+		args[i] = ids[i]
+	}
+	_, err := s.db.Exec("DELETE FROM articles WHERE id IN ("+string(placeholders)+")", args...)
+	return err
+}
+
 func (s *Store) CheckArticleByURL(url string) (string, bool) {
 	var id string
 	err := s.db.QueryRow("SELECT id FROM articles WHERE url = ? AND url != ''", url).Scan(&id)
