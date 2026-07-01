@@ -34,16 +34,45 @@
     setTimeout(() => menuTargetUrl = url, 0);
   }
 
+  // Long-press / right-click on links in article content to show menu
   var content = document.querySelector('.article-content');
+  var longPressTimer = null;
+
   if (content) {
-    content.addEventListener('click', function (e) {
+    content.addEventListener('contextmenu', function (e) {
+      var a = e.target.closest('a[href]');
+      if (!a) return;
+      var href = a.getAttribute('href');
+      if (!href || href.startsWith('#') || href.startsWith('mailto:') || href.startsWith('javascript:')) return;
+      e.preventDefault();
+      showLinkMenu(e.clientX, e.clientY, href);
+    });
+
+    content.addEventListener('touchstart', function (e) {
       var a = e.target.closest('a[href]');
       if (!a) return;
       var href = a.getAttribute('href');
       if (!href || href.startsWith('#') || href.startsWith('mailto:') || href.startsWith('javascript:')) return;
 
-      e.preventDefault();
-      showLinkMenu(e.clientX, e.clientY, href);
+      var touch = e.touches[0];
+      longPressTimer = setTimeout(function () {
+        longPressTimer = null;
+        showLinkMenu(touch.clientX, touch.clientY, href);
+      }, 500);
+    });
+
+    content.addEventListener('touchend', function () {
+      if (longPressTimer) {
+        clearTimeout(longPressTimer);
+        longPressTimer = null;
+      }
+    });
+
+    content.addEventListener('touchmove', function () {
+      if (longPressTimer) {
+        clearTimeout(longPressTimer);
+        longPressTimer = null;
+      }
     });
   }
 
@@ -87,10 +116,10 @@
 
   document.addEventListener('click', function (e) {
     if (linkMenu && !linkMenu.classList.contains('hidden')) {
-      if (!linkMenu.contains(e.target) && !e.target.closest('.article-content a')) {
+      if (!linkMenu.contains(e.target)) {
         hideLinkMenu();
       }
-    });
+    }
   });
 
   document.addEventListener('keydown', function (e) {
