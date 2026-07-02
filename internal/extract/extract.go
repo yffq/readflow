@@ -1,24 +1,29 @@
 package extract
 
 import (
+	"bytes"
 	"fmt"
 	"io"
 	"net/http"
+	"regexp"
 	"strings"
 	"time"
 
 	readability "github.com/go-shiori/go-readability"
 )
 
-var client = &http.Client{
-	Timeout: 30 * time.Second,
-	CheckRedirect: func(req *http.Request, via []*http.Request) error {
-		if len(via) >= 5 {
-			return fmt.Errorf("too many redirects")
-		}
-		return nil
-	},
-}
+var (
+	client = &http.Client{
+		Timeout: 30 * time.Second,
+		CheckRedirect: func(req *http.Request, via []*http.Request) error {
+			if len(via) >= 5 {
+				return fmt.Errorf("too many redirects")
+			}
+			return nil
+		},
+	}
+	titleRe = regexp.MustCompile(`(?is)<title[^>]*>(.+?)</title>`)
+)
 
 type ExtractResult struct {
 	Title    string
@@ -56,7 +61,12 @@ func Extract(url string) (*ExtractResult, error) {
 		return nil, fmt.Errorf("not an HTML page, content-type: %s", contentType)
 	}
 
-	article, err := readability.FromReader(resp.Body, resp.Request.URL)
+	body, err := io.ReadAll(io.LimitReader(resp.Body, 10*1024*1024))
+	if err != nil {
+		return nil, fmt.Errorf("read body: %w", err)
+	}
+
+	article, err := readability.FromReader(bytes.NewReader(body), resp.Request.URL)
 	if err != nil {
 		return nil, fmt.Errorf("extract content: %w", err)
 	}
@@ -64,6 +74,13 @@ func Extract(url string) (*ExtractResult, error) {
 	title := article.Title
 	if title == "" {
 		title = "Untitled"
+	}
+
+	// Fix: when og:title is the site name (short) instead of article title,
+	// prefer the <title> tag which usually contains the real article title.
+	htmlTitle := extractTitleTag(string(body))
+	if htmlTitle != "" && len([]rune(title)) < len([]rune(htmlTitle))/2 {
+		title = htmlTitle
 	}
 
 	content := article.Content
@@ -79,4 +96,12 @@ func Extract(url string) (*ExtractResult, error) {
 		SiteName: article.SiteName,
 		Length:   len(article.TextContent),
 	}, nil
+}
+
+func extractTitleTag(html string) string {
+	m := titleRe.FindStringSubmatch(html)
+	if len(m) > 1 {
+		return strings.TrimSpace(m[1])
+	}
+	return ""
 }
