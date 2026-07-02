@@ -128,7 +128,17 @@ curl -X POST https://your-domain.com/api/v1/delete \
 
 ## 浏览器扩展
 
-使用 [Readflow Chrome 扩展](extension/) 可以右键保存当前页面。
+在 Chrome 中加载 `extension/` 目录即可使用：
+
+1. 打开 `chrome://extensions/`
+2. 开启「开发者模式」
+3. 点击「加载已解压的扩展程序」，选择 `extension/` 目录
+4. 在扩展图标上右键 → 选项，配置 Server URL 和 API Key
+
+**使用方式：**
+- 点击扩展图标 → Save Current Page 保存当前页面
+- 页面右键 → Save Page to Readflow
+- 链接右键 → Save Link to Readflow
 
 ## 开发
 

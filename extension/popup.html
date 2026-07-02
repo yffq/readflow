@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <style>
+    body {
+      width: 320px;
+      padding: 16px;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      margin: 0;
+      background: #fff;
+      color: #1a1a1a;
+    }
+    @media (prefers-color-scheme: dark) {
+      body { background: #1f2937; color: #f3f4f6; }
+      input { background: #374151; color: #f3f4f6; border-color: #4b5563; }
+      .status-ok { color: #10b981; }
+    }
+    h2 { margin: 0 0 12px; font-size: 1rem; }
+    .info { font-size: 0.8rem; color: #666; margin-bottom: 12px; word-break: break-all; }
+    button {
+      width: 100%;
+      padding: 10px;
+      background: #2563eb;
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      font-size: 0.9rem;
+      cursor: pointer;
+      font-weight: 500;
+    }
+    button:hover { background: #1d4ed8; }
+    button:disabled { opacity: 0.5; cursor: not-allowed; }
+    .status { margin-top: 10px; font-size: 0.85rem; text-align: center; min-height: 20px; }
+    .status-ok { color: #10b981; }
+    .status-err { color: #dc2626; }
+    .settings-link {
+      display: block;
+      text-align: center;
+      margin-top: 12px;
+      font-size: 0.8rem;
+      color: #2563eb;
+      text-decoration: none;
+    }
+    .html-toggle {
+      margin-top: 12px;
+      font-size: 0.8rem;
+      color: #666;
+    }
+    .html-toggle label { cursor: pointer; }
+  </style>
+</head>
+<body>
+  <h2>Save to Readflow</h2>
+  <div class="info" id="page-info">Loading...</div>
+  <button id="save-btn">Save Current Page</button>
+  <div class="status" id="status"></div>
+  <a class="settings-link" href="#" id="open-options">Settings</a>
+
+  <script src="popup.js"></script>
+</body>
+</html>
