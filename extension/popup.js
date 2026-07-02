@@ -25,12 +25,13 @@ saveBtn.addEventListener('click', () => {
       return;
     }
 
+    const apiUrl = settings.serverUrl.replace(/\/$/, '') + '/api/v1/save';
     const body = {
       url: currentTab.url,
       title: currentTab.title || ''
     };
 
-    fetch(settings.serverUrl.replace(/\/$/, '') + '/api/v1/save', {
+    fetch(apiUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -38,7 +39,12 @@ saveBtn.addEventListener('click', () => {
       },
       body: JSON.stringify(body)
     })
-      .then(res => res.json())
+      .then(res => {
+        if (!res.ok) {
+          return res.json().then(d => { throw new Error(d.error || 'HTTP ' + res.status); });
+        }
+        return res.json();
+      })
       .then(data => {
         if (data.error) {
           statusEl.textContent = 'Error: ' + data.error;
@@ -49,8 +55,8 @@ saveBtn.addEventListener('click', () => {
         }
         saveBtn.disabled = false;
       })
-      .catch(() => {
-        statusEl.textContent = 'Failed to save.';
+      .catch(err => {
+        statusEl.textContent = 'Failed: ' + err.message;
         statusEl.className = 'status status-err';
         saveBtn.disabled = false;
       });

@@ -27,7 +27,7 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
 
   loadSettings().then(settings => {
     if (!settings.apiKey || !settings.serverUrl) {
-      notifyUser('Readflow: Please configure API key and server URL in extension options.');
+      console.log('Readflow: Please configure API key and server URL in extension options.');
       return;
     }
 
@@ -42,22 +42,23 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
       },
       body: JSON.stringify(body)
     })
-      .then(res => res.json())
+      .then(res => {
+        if (!res.ok) {
+          return res.json().then(d => { throw new Error(d.error || 'HTTP ' + res.status); });
+        }
+        return res.json();
+      })
       .then(data => {
         if (data.error) {
-          notifyUser('Readflow: ' + data.error);
+          console.log('Readflow error: ' + data.error);
         } else {
-          notifyUser('Readflow: Saved!');
+          console.log('Readflow: Saved!');
         }
       })
-      .catch(() => notifyUser('Readflow: Failed to save.'));
+      .catch(err => console.log('Readflow: ' + err.message));
   });
 });
 
 function loadSettings() {
   return chrome.storage.sync.get({ apiKey: '', serverUrl: '' });
-}
-
-function notifyUser(msg) {
-  console.log(msg);
 }
