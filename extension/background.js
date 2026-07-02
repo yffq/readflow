@@ -59,10 +59,5 @@ function loadSettings() {
 }
 
 function notifyUser(msg) {
-  chrome.notifications ? chrome.notifications.create({
-    type: 'basic',
-    title: 'Readflow',
-    message: msg,
-    iconUrl: 'icons/icon48.png'
-  }) : console.log(msg);
+  console.log(msg);
 }
