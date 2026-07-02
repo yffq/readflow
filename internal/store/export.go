@@ -32,8 +32,8 @@ func (s *Store) ListArticlesSince(updatedAfter time.Time, limit, offset int) ([]
 			return nil, 0, err
 		}
 		a.ExtractionFailed = ef != 0
-		a.CreatedAt, _ = time.Parse("2006-01-02 15:04:05", createdAt)
-		a.UpdatedAt, _ = time.Parse("2006-01-02 15:04:05", updatedAt)
+		a.CreatedAt = parseTime(createdAt)
+		a.UpdatedAt = parseTime(updatedAt)
 		results = append(results, a)
 	}
 	return results, count, rows.Err()

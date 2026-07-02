@@ -36,8 +36,8 @@ func (s *Store) GetArticle(id string) (*model.Article, error) {
 		return nil, err
 	}
 	a.ExtractionFailed = extractionFailed != 0
-	a.CreatedAt, _ = time.Parse("2006-01-02 15:04:05", createdAt)
-	a.UpdatedAt, _ = time.Parse("2006-01-02 15:04:05", updatedAt)
+	a.CreatedAt = parseTime(createdAt)
+	a.UpdatedAt = parseTime(updatedAt)
 	return a, nil
 }
 
@@ -75,8 +75,8 @@ func (s *Store) ListArticles(status string, limit, offset int) ([]model.Article,
 			return nil, 0, err
 		}
 		a.ExtractionFailed = ef != 0
-		a.CreatedAt, _ = time.Parse("2006-01-02 15:04:05", createdAt)
-		a.UpdatedAt, _ = time.Parse("2006-01-02 15:04:05", updatedAt)
+		a.CreatedAt = parseTime(createdAt)
+		a.UpdatedAt = parseTime(updatedAt)
 		articles = append(articles, a)
 	}
 	return articles, count, rows.Err()
@@ -112,6 +112,13 @@ func (s *Store) CheckArticleByURL(url string) (string, bool) {
 	var id string
 	err := s.db.QueryRow("SELECT id FROM articles WHERE url = ? AND url != ''", url).Scan(&id)
 	return id, err == nil
+}
+
+func parseTime(s string) time.Time {
+	if t, err := time.Parse("2006-01-02 15:04:05", s); err == nil {
+		return t
+	}
+	return time.Now()
 }
 
 func boolToInt(b bool) int {
