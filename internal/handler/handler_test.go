@@ -407,37 +407,22 @@ func TestReadPage_ExtractionFailed(t *testing.T) {
 	}
 }
 
-func TestArchiveDelete(t *testing.T) {
+func TestDelete(t *testing.T) {
 	h := setupTestHandler(t)
 
-	a := testArticle("arch-1", "To Archive", "url", time.Now())
+	a := testArticle("arch-1", "To Delete", "url", time.Now())
 	a.Status = "unread"
 	h.Store.CreateArticle(a)
 
-	// Archive
-	req := httptest.NewRequest("POST", "/archive/arch-1", nil)
+	req := httptest.NewRequest("POST", "/delete/arch-1", nil)
 	req.SetPathValue("id", "arch-1")
 	rec := httptest.NewRecorder()
-	h.ArchiveArticle(rec, req)
-	if rec.Code != http.StatusSeeOther && rec.Code != http.StatusOK {
-		t.Fatalf("archive: expected 303 or 200, got %d", rec.Code)
-	}
-
-	got, _ := h.Store.GetArticle("arch-1")
-	if got.Status != "archived" {
-		t.Fatal("article should be archived")
-	}
-
-	// Delete
-	req = httptest.NewRequest("POST", "/delete/arch-1", nil)
-	req.SetPathValue("id", "arch-1")
-	rec = httptest.NewRecorder()
 	h.DeleteArticle(rec, req)
 	if rec.Code != http.StatusSeeOther && rec.Code != http.StatusOK {
 		t.Fatalf("delete: expected 303 or 200, got %d", rec.Code)
 	}
 
-	got, _ = h.Store.GetArticle("arch-1")
+	got, _ := h.Store.GetArticle("arch-1")
 	if got != nil {
 		t.Fatal("article should be deleted")
 	}

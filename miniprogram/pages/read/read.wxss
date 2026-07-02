@@ -1,0 +1,32 @@
+.article-header {
+  padding: 16px 0 20px;
+  border-bottom: 1px solid #262626;
+  margin-bottom: 20px;
+}
+
+.article-title {
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 1.4;
+}
+
+.article-byline {
+  margin-top: 8px;
+  font-size: 13px;
+  color: #8a857d;
+  display: flex;
+  gap: 12px;
+}
+
+.site { color: #b5a48b; }
+
+.article-body {
+  font-size: 16px;
+  line-height: 1.8;
+}
+
+.loading {
+  text-align: center;
+  padding: 60px 0;
+  color: #8a857d;
+}

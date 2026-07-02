@@ -1,21 +1,21 @@
 :root {
-    --bg: #ffffff;
-    --bg-secondary: #f8f8f8;
-    --text: #1a1a1a;
-    --text-secondary: #666;
-    --border: #e0e0e0;
-    --primary: #2563eb;
-    --primary-hover: #1d4ed8;
-    --danger: #dc2626;
-    --danger-hover: #b91c1c;
-    --warn: #f59e0b;
-    --warn-bg: #fffbeb;
-    --success: #10b981;
-    --card-bg: #ffffff;
-    --card-shadow: 0 1px 3px rgba(0,0,0,0.08);
-    --menu-bg: #ffffff;
-    --menu-shadow: 0 4px 12px rgba(0,0,0,0.15);
-    --code-bg: #f1f5f9;
+    --bg: #f5f2ee;
+    --bg-secondary: #ede8e2;
+    --text: #3d3833;
+    --text-secondary: #8a8378;
+    --border: #d8d2ca;
+    --primary: #7b6e5d;
+    --primary-hover: #5f5446;
+    --danger: #c06050;
+    --danger-hover: #964838;
+    --warn: #b8860b;
+    --warn-bg: #fef5e0;
+    --success: #5a8f4b;
+    --card-bg: #f5f2ee;
+    --card-shadow: 0 1px 3px rgba(0,0,0,0.06);
+    --menu-bg: #f5f2ee;
+    --menu-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    --code-bg: #ece5dd;
     --max-width: 720px;
     --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
     --font-mono: "SF Mono", Monaco, "Cascadia Code", monospace;
@@ -23,22 +23,22 @@
 
 @media (prefers-color-scheme: dark) {
     :root {
-        --bg: #111827;
-        --bg-secondary: #1f2937;
-        --text: #f3f4f6;
-        --text-secondary: #9ca3af;
-        --border: #374151;
-        --primary: #60a5fa;
-        --primary-hover: #93bbfd;
-        --danger: #f87171;
-        --danger-hover: #ef4444;
-        --warn: #fbbf24;
-        --warn-bg: #451a03;
-        --card-bg: #1f2937;
+        --bg: #1c1c1c;
+        --bg-secondary: #262626;
+        --text: #c5c0b8;
+        --text-secondary: #8a857d;
+        --border: #333333;
+        --primary: #b5a48b;
+        --primary-hover: #c6b89f;
+        --danger: #d9705a;
+        --danger-hover: #e8836f;
+        --warn: #d4a543;
+        --warn-bg: #3d2e14;
+        --card-bg: #262626;
         --card-shadow: 0 1px 3px rgba(0,0,0,0.3);
-        --menu-bg: #1f2937;
+        --menu-bg: #262626;
         --menu-shadow: 0 4px 12px rgba(0,0,0,0.4);
-        --code-bg: #1e293b;
+        --code-bg: #2e2e2e;
     }
 }
 

@@ -1,0 +1,13 @@
+<view class="container">
+  <view class="form">
+    <view class="form-group">
+      <text class="label">Server URL</text>
+      <input class="input" placeholder="https://your-server.com" value="{{apiUrl}}" bindinput="onApiUrlChange" />
+    </view>
+    <view class="form-group">
+      <text class="label">API Key</text>
+      <input class="input" placeholder="rf_..." value="{{apiKey}}" bindinput="onApiKeyChange" password />
+    </view>
+    <button class="btn-primary" bindtap="saveSettings">Save</button>
+  </view>
+</view>

@@ -122,20 +122,15 @@ func (h *Handler) Logout(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) Index(w http.ResponseWriter, r *http.Request) {
-	status := r.URL.Query().Get("status")
-	if status == "" {
-		status = "unread"
-	}
 	page := intValue(r.URL.Query().Get("page"), 1)
 	limit := 20
 	offset := (page - 1) * limit
-	articles, total, _ := h.Store.ListArticles(status, limit, offset)
+	articles, total, _ := h.Store.ListArticles("unread", limit, offset)
 	h.render(w, r, "page_index", map[string]any{
 		"Articles": articles,
 		"Total":    total,
 		"Page":     page,
 		"Limit":    limit,
-		"Status":   status,
 	})
 }
 
@@ -328,12 +323,6 @@ func (h *Handler) APIExport(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, resp)
 }
 
-func (h *Handler) ArchiveArticle(w http.ResponseWriter, r *http.Request) {
-	id := r.PathValue("id")
-	h.Store.UpdateArticleStatus(id, "archived")
-	http.Redirect(w, r, "/", http.StatusSeeOther)
-}
-
 func (h *Handler) DeleteArticle(w http.ResponseWriter, r *http.Request) {
 	id := r.PathValue("id")
 	h.Store.DeleteArticle(id)
@@ -389,12 +378,6 @@ func (h *Handler) APIDeleteArticles(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"deleted": len(req.IDs)})
-}
-
-func (h *Handler) UnreadArticle(w http.ResponseWriter, r *http.Request) {
-	id := r.PathValue("id")
-	h.Store.UpdateArticleStatus(id, "unread")
-	http.Redirect(w, r, "/", http.StatusSeeOther)
 }
 
 func (h *Handler) ReadIframePage(w http.ResponseWriter, r *http.Request) {

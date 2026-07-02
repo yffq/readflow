@@ -86,10 +86,8 @@ func New(dbPath string) (*Server, error) {
 			r.Post("/save", h.SaveForm)
 			r.Post("/generate-key", h.GenerateAPIKey)
 			r.Post("/delete-key/{id}", h.DeleteAPIKey)
-			r.Post("/archive/{id}", h.ArchiveArticle)
 			r.Post("/delete/{id}", h.DeleteArticle)
 			r.Post("/delete-batch", h.DeleteArticles)
-			r.Post("/unread/{id}", h.UnreadArticle)
 		})
 	})
 

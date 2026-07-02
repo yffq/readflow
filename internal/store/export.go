@@ -9,7 +9,7 @@ import (
 func (s *Store) ListArticlesSince(updatedAfter time.Time, limit, offset int) ([]model.ArticleExport, int, error) {
 	var count int
 	countSQL := "SELECT COUNT(*) FROM articles WHERE updated_at > ?"
-	querySQL := `SELECT id, title, url, content_md, author, site_name, word_count, source, extraction_failed, status, created_at, updated_at
+	querySQL := `SELECT id, title, url, content_html, content_md, author, site_name, word_count, source, extraction_failed, status, created_at, updated_at
 		FROM articles WHERE updated_at > ? ORDER BY updated_at ASC LIMIT ? OFFSET ?`
 
 	if err := s.db.QueryRow(countSQL, updatedAfter.Format("2006-01-02 15:04:05")).Scan(&count); err != nil {
@@ -27,7 +27,7 @@ func (s *Store) ListArticlesSince(updatedAfter time.Time, limit, offset int) ([]
 		var a model.ArticleExport
 		var ef int
 		var createdAt, updatedAt string
-		if err := rows.Scan(&a.ID, &a.Title, &a.URL, &a.ContentMarkdown, &a.Author, &a.SiteName,
+		if err := rows.Scan(&a.ID, &a.Title, &a.URL, &a.ContentHTML, &a.ContentMarkdown, &a.Author, &a.SiteName,
 			&a.WordCount, &a.Source, &ef, &a.Status, &createdAt, &updatedAt); err != nil {
 			return nil, 0, err
 		}

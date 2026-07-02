@@ -3,10 +3,6 @@
     <div class="reading-header">
         <a href="/" class="back-link">&larr; Back</a>
         <div class="reading-actions">
-            <form method="POST" action="/archive/{{.Article.ID}}" class="inline">
-                <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
-                <button class="btn-sm">{{if eq .Article.Status "archived"}}Unarchive{{else}}Archive{{end}}</button>
-            </form>
             <form method="POST" action="/delete/{{.Article.ID}}" class="inline" onsubmit="return confirm('Delete this article?')">
                 <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
                 <button class="btn-sm btn-danger">Delete</button>

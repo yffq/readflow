@@ -1,0 +1,17 @@
+<view class="container">
+  <view class="article-header">
+    <text class="article-title">{{title}}</text>
+    <view class="article-byline" wx:if="{{author || sitename}}">
+      <text wx:if="{{author}}" class="author">{{author}}</text>
+      <text wx:if="{{sitename}}" class="site">{{sitename}}</text>
+    </view>
+  </view>
+
+  <view class="article-body" wx:if="{{htmlContent}}">
+    <rich-text nodes="{{htmlContent}}"></rich-text>
+  </view>
+
+  <view class="loading" wx:else>
+    <text>Loading...</text>
+  </view>
+</view>

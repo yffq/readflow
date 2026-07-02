@@ -1,0 +1,16 @@
+{
+  "pages": [
+    "pages/index/index",
+    "pages/read/read",
+    "pages/settings/settings"
+  ],
+  "window": {
+    "navigationBarTitleText": "Readflow",
+    "navigationBarBackgroundColor": "#262626",
+    "navigationBarTextStyle": "white",
+    "backgroundColor": "#1c1c1c",
+    "backgroundTextStyle": "light"
+  },
+  "style": "v2",
+  "sitemapLocation": "sitemap.json"
+}

@@ -40,6 +40,7 @@ type ArticleExport struct {
 	ID               string    `json:"id"`
 	Title            string    `json:"title"`
 	URL              string    `json:"url,omitempty"`
+	ContentHTML      string    `json:"content_html"`
 	ContentMarkdown  string    `json:"content_markdown"`
 	Author           string    `json:"author,omitempty"`
 	SiteName         string    `json:"site_name,omitempty"`

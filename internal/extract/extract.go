@@ -22,7 +22,8 @@ var (
 			return nil
 		},
 	}
-	titleRe = regexp.MustCompile(`(?is)<title[^>]*>(.+?)</title>`)
+	titleRe   = regexp.MustCompile(`(?is)<title[^>]*>(.+?)</title>`)
+	imgAttrRe = regexp.MustCompile(`(?i)\s+(width|height)\s*=\s*"[^"]*"`)
 )
 
 type ExtractResult struct {
@@ -87,6 +88,7 @@ func Extract(url string) (*ExtractResult, error) {
 	if content == "" {
 		content = fmt.Sprintf("<p>%s</p>", article.TextContent)
 	}
+	content = stripImgAttrs(content)
 
 	return &ExtractResult{
 		Title:    title,
@@ -96,6 +98,10 @@ func Extract(url string) (*ExtractResult, error) {
 		SiteName: article.SiteName,
 		Length:   len(article.TextContent),
 	}, nil
+}
+
+func stripImgAttrs(html string) string {
+	return imgAttrRe.ReplaceAllString(html, "")
 }
 
 func extractTitleTag(html string) string {
