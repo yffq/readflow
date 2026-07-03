@@ -82,29 +82,14 @@
       hideLinkMenu();
       if (!url) return;
 
-      var apiKey = getApiKey();
-      if (!apiKey) {
-        showToast('Set up an API key in Settings first.');
-        return;
-      }
-
-      fetch('/api/v1/save', {
+      var body = 'url=' + encodeURIComponent(url) + '&csrf_token=' + encodeURIComponent(csrfToken);
+      fetch('/save', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer ' + apiKey
-        },
-        body: JSON.stringify({ url: url })
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: body
       })
-        .then(res => res.json())
-        .then(data => {
-          if (data.error) {
-            showToast('Error: ' + data.error);
-          } else {
-            showToast('Saved to Read Later');
-          }
-        })
-        .catch(() => showToast('Failed to save. Check your connection.'));
+        .then(function () { showToast('Saved to Read Later'); })
+        .catch(function () { showToast('Failed to save.'); });
     });
 
     linkMenu.querySelector('.lm-open').addEventListener('click', function () {
@@ -125,15 +110,6 @@
   document.addEventListener('keydown', function (e) {
     if (e.key === 'Escape') hideLinkMenu();
   });
-
-  function getApiKey() {
-    var key = sessionStorage.getItem('readflow_api_key');
-    if (!key) {
-      key = prompt('Enter your Readflow API key (from Settings page):');
-      if (key) sessionStorage.setItem('readflow_api_key', key);
-    }
-    return key;
-  }
 
   // --- Batch selection ---
   var selectAll = document.getElementById('select-all');

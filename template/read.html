@@ -19,6 +19,10 @@
             <span class="reading-time">{{.ReadTime}} read</span>
         </div>
 
+        {{if .Article.URL}}
+        <div class="original-link"><a href="{{.Article.URL}}" target="_blank" rel="noopener">&larr; 原文链接</a></div>
+        {{end}}
+
         {{if .Article.ExtractionFailed}}
         <div class="extraction-failed">
             <div class="ef-card">

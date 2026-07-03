@@ -5,10 +5,20 @@
       <text wx:if="{{author}}" class="author">{{author}}</text>
       <text wx:if="{{sitename}}" class="site">{{sitename}}</text>
     </view>
+    <view class="original-link" wx:if="{{url}}" bindtap="openOriginal">
+      <text class="original-label">原文链接</text>
+    </view>
   </view>
 
   <view class="article-body" wx:if="{{htmlContent}}">
     <rich-text nodes="{{htmlContent}}"></rich-text>
+  </view>
+
+  <view class="no-content" wx:elif="{{!loading}}">
+    <text>暂无内容</text>
+    <view wx:if="{{url}}" class="open-original-btn" bindtap="openOriginal">
+      <text>打开原文</text>
+    </view>
   </view>
 
   <view class="loading" wx:else>

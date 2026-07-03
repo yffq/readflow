@@ -20,13 +20,31 @@
 
 .site { color: #b5a48b; }
 
+.original-link {
+  margin-top: 12px;
+}
+
+.original-label {
+  font-size: 13px;
+  color: #7b6e5d;
+  background: #262626;
+  padding: 6px 12px;
+  border-radius: 6px;
+}
+
 .article-body {
   font-size: 16px;
   line-height: 1.8;
 }
 
-.loading {
+.loading, .no-content {
   text-align: center;
   padding: 60px 0;
   color: #8a857d;
+}
+
+.open-original-btn {
+  margin-top: 12px;
+  color: #b5a48b;
+  text-decoration: underline;
 }

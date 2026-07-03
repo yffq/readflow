@@ -94,10 +94,21 @@ func Extract(url string) (*ExtractResult, error) {
 		Title:    title,
 		Content:  content,
 		Text:     article.TextContent,
-		Author:   article.Byline,
+		Author:   cleanAuthor(article.Byline),
 		SiteName: article.SiteName,
 		Length:   len(article.TextContent),
 	}, nil
+}
+
+func cleanAuthor(author string) string {
+	author = strings.TrimSpace(author)
+	if after, ok := strings.CutPrefix(author, "By "); ok {
+		return strings.TrimSpace(after)
+	}
+	if after, ok := strings.CutPrefix(author, "by "); ok {
+		return strings.TrimSpace(after)
+	}
+	return author
 }
 
 func stripImgAttrs(html string) string {

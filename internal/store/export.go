@@ -10,7 +10,7 @@ func (s *Store) ListArticlesSince(updatedAfter time.Time, limit, offset int) ([]
 	var count int
 	countSQL := "SELECT COUNT(*) FROM articles WHERE updated_at > ?"
 	querySQL := `SELECT id, title, url, content_html, content_md, author, site_name, word_count, source, extraction_failed, status, created_at, updated_at
-		FROM articles WHERE updated_at > ? ORDER BY updated_at ASC LIMIT ? OFFSET ?`
+		FROM articles WHERE updated_at > ? ORDER BY updated_at DESC LIMIT ? OFFSET ?`
 
 	if err := s.db.QueryRow(countSQL, updatedAfter.Format("2006-01-02 15:04:05")).Scan(&count); err != nil {
 		return nil, 0, err

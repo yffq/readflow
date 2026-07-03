@@ -412,6 +412,11 @@ body {
     margin-bottom: 32px;
 }
 
+.original-link {
+    margin-bottom: 24px;
+    font-size: 0.85rem;
+}
+
 .article-content {
     font-size: 1.05rem;
     line-height: 1.75;
