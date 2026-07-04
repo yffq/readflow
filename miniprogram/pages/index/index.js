@@ -26,8 +26,14 @@ Page({
     }
     const offset = (this.data.page - 1) * this.data.limit
     return api.fetchArticles(this.data.limit, offset).then(res => {
+      const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+      const articles = (res.results || []).map(a => {
+        const d = a.saved_at ? new Date(a.saved_at) : null
+        const saved_at = d && !isNaN(d.getTime()) ? months[d.getMonth()] + ' ' + String(d.getDate()).padStart(2, '0') + ', ' + d.getFullYear() : a.saved_at
+        return Object.assign({}, a, { saved_at })
+      })
       this.setData({
-        articles: res.results || [],
+        articles,
         total: res.count || 0,
         loading: false
       })

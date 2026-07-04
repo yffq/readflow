@@ -38,7 +38,9 @@
             <text wx:if="{{item.site_name}}" class="site">{{item.site_name}}</text>
             <text wx:if="{{item.author}}" class="author">by {{item.author}}</text>
             <text class="time">{{item.saved_at}}</text>
+            <text wx:if="{{item.word_count}}" class="words">{{item.word_count}} words</text>
           </view>
+          <view wx:if="{{item.extraction_failed}}" class="extraction-failed-badge">extraction failed</view>
         </view>
         <view class="card-delete" catchtap="confirmDelete" data-id="{{item.id}}">
           <text class="delete-icon">X</text>
