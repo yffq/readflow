@@ -97,6 +97,8 @@ curl "https://your-domain.com/api/v1/export?updated_after=2024-01-01T00:00:00Z&l
       "url": "https://example.com/article",
       "author": "Author Name",
       "site_name": "Example",
+      "content_html": "<p>...</p>",
+      "content_markdown": "...",
       "word_count": 1234,
       "source": "url",
       "extraction_failed": false,
@@ -139,6 +141,15 @@ curl -X POST https://your-domain.com/api/v1/delete \
 - 点击扩展图标 → Save Current Page 保存当前页面
 - 页面右键 → Save Page to Readflow
 - 链接右键 → Save Link to Readflow
+
+## 微信小程序
+
+在微信开发者工具中打开 `miniprogram/` 目录即可运行。
+
+1. 首次启动会自动跳转设置页，配置服务器地址和 API Key
+2. 设置页保存后进入文章列表，支持下拉刷新和删除
+3. 点击文章进入阅读视图，自动适配手机屏幕
+4. 点击原文链接会将 URL 复制到剪贴板
 
 ## 开发
 
