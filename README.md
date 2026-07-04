@@ -1,6 +1,8 @@
 # Readflow
 
-自托管的稍后阅读（read-later）工具，支持保存网页文章和粘贴全文内容。
+A self-hosted read-later service. Save web articles and paste full-text content for distraction-free reading. Supports Chrome extension, Web UI, and WeChat Mini Program.
+
+自托管的稍后阅读（read-later）工具，支持保存网页文章和粘贴全文内容。支持 Chrome 浏览器扩展、网页端和微信小程序。
 
 ## 部署
 
