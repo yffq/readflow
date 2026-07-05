@@ -10,18 +10,52 @@
     </view>
   </view>
 
-  <view class="article-body" wx:if="{{htmlContent}}">
-    <rich-text nodes="{{htmlContent}}"></rich-text>
+  <view class="article-body" wx:if="{{nodes.length > 0}}">
+    <block wx:for="{{nodes}}" wx:key="index">
+      <view class="h{{item.level}}" wx:if="{{item.type === 'heading'}}"><text>{{item.content}}</text></view>
+
+      <view class="p" wx:elif="{{item.type === 'para'}}">
+        <block wx:for="{{item.parts}}" wx:for-item="p" wx:key="idx">
+          <text wx:if="{{p.type === 'text'}}">{{p.content}}</text>
+          <text wx:elif="{{p.type === 'link'}}" class="link" bindtap="saveLink" data-url="{{p.href}}">{{p.text}}</text>
+          <text wx:elif="{{p.type === 'strong'}}" class="strong">{{p.content}}</text>
+          <text wx:elif="{{p.type === 'em'}}" class="em">{{p.content}}</text>
+          <text wx:elif="{{p.type === 'code'}}" class="ic">{{p.content}}</text>
+        </block>
+      </view>
+
+      <view class="blockquote" wx:elif="{{item.type === 'quote'}}">
+        <block wx:for="{{item.parts}}" wx:for-item="p" wx:key="idx">
+          <text wx:if="{{p.type === 'text'}}">{{p.content}}</text>
+          <text wx:elif="{{p.type === 'link'}}" class="link" bindtap="saveLink" data-url="{{p.href}}">{{p.text}}</text>
+          <text wx:elif="{{p.type === 'strong'}}" class="strong">{{p.content}}</text>
+          <text wx:elif="{{p.type === 'em'}}" class="em">{{p.content}}</text>
+          <text wx:elif="{{p.type === 'code'}}" class="ic">{{p.content}}</text>
+        </block>
+      </view>
+
+      <view class="list" wx:elif="{{item.type === 'list'}}">
+        <view class="li" wx:for="{{item.items}}" wx:for-item="li" wx:key="idx">
+          <text class="li-marker">• </text>
+          <block wx:for="{{li}}" wx:for-item="p" wx:key="idx2">
+            <text wx:if="{{p.type === 'text'}}">{{p.content}}</text>
+            <text wx:elif="{{p.type === 'link'}}" class="link" bindtap="saveLink" data-url="{{p.href}}">{{p.text}}</text>
+            <text wx:elif="{{p.type === 'strong'}}" class="strong">{{p.content}}</text>
+            <text wx:elif="{{p.type === 'em'}}" class="em">{{p.content}}</text>
+            <text wx:elif="{{p.type === 'code'}}" class="ic">{{p.content}}</text>
+          </block>
+        </view>
+      </view>
+
+      <view class="pre" wx:elif="{{item.type === 'code'}}"><text>{{item.content}}</text></view>
+      <image wx:elif="{{item.type === 'image'}}" src="{{item.src}}" mode="widthFix" class="article-img"></image>
+    </block>
   </view>
 
   <view class="no-content" wx:elif="{{!loading}}">
     <text>暂无内容</text>
-    <view wx:if="{{url}}" class="open-original-btn" bindtap="openOriginal">
-      <text>打开原文</text>
-    </view>
+    <view wx:if="{{url}}" class="open-original-btn" bindtap="openOriginal"><text>打开原文</text></view>
   </view>
 
-  <view class="loading" wx:else>
-    <text>Loading...</text>
-  </view>
+  <view class="loading" wx:else><text>Loading...</text></view>
 </view>

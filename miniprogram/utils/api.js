@@ -36,4 +36,11 @@ function deleteArticles(ids) {
   })
 }
 
-module.exports = { fetchArticles, deleteArticles }
+function saveArticle(url) {
+  return request('/api/v1/save', {
+    method: 'POST',
+    data: { url }
+  })
+}
+
+module.exports = { fetchArticles, deleteArticles, saveArticle }
