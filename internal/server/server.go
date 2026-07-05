@@ -97,6 +97,7 @@ func New(dbPath string) (*Server, error) {
 
 		r.Post("/save", h.APISave)
 		r.Get("/export", h.APIExport)
+		r.Get("/read/{id}", h.ReadMobilePage)
 		r.Post("/delete", h.APIDeleteArticles)
 	})
 

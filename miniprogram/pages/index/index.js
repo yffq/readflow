@@ -46,11 +46,8 @@ Page({
   },
 
   openArticle(e) {
-    const { id, title, html, url, author, sitename } = e.currentTarget.dataset
-    wx.setStorageSync('article_' + id, html || '')
-    wx.navigateTo({
-      url: `/pages/read/read?id=${id}&title=${encodeURIComponent(title)}&url=${encodeURIComponent(url || '')}&author=${encodeURIComponent(author || '')}&sitename=${encodeURIComponent(sitename || '')}`
-    })
+    const { id } = e.currentTarget.dataset
+    wx.navigateTo({ url: '/pages/read/read?id=' + id })
   },
 
   confirmDelete(e) {

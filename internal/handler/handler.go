@@ -8,6 +8,7 @@ import (
 	"html/template"
 	"net/http"
 	"net/url"
+	"strings"
 	"time"
 
 	md "github.com/JohannesKaufmann/html-to-markdown"
@@ -152,6 +153,33 @@ func (h *Handler) ReadPage(w http.ResponseWriter, r *http.Request) {
 		"RelTime":   relativeTime,
 		"WordCount": article.WordCount,
 		"ReadTime":  estimateReadTime(article.WordCount),
+	})
+}
+
+func (h *Handler) ReadMobilePage(w http.ResponseWriter, r *http.Request) {
+	apiKey := r.URL.Query().Get("api_key")
+	if apiKey == "" {
+		apiKey = r.Header.Get("Authorization")
+		apiKey = strings.TrimPrefix(apiKey, "Bearer ")
+	}
+
+	id := r.PathValue("id")
+	if id == "" {
+		http.NotFound(w, r)
+		return
+	}
+	article, err := h.Store.GetArticle(id)
+	if err != nil || article == nil {
+		http.NotFound(w, r)
+		return
+	}
+	age := time.Since(article.CreatedAt)
+	relativeTime := formatRelativeTime(age)
+
+	h.render(w, r, "page_mobile_read", map[string]any{
+		"Article": article,
+		"RelTime": relativeTime,
+		"APIKey":  apiKey,
 	})
 }
 
