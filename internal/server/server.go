@@ -84,6 +84,7 @@ func New(dbPath string) (*Server, error) {
 			r.Get("/logout", h.Logout)
 
 			r.Post("/save", h.SaveForm)
+			r.Post("/save-link", h.SaveLink)
 			r.Post("/generate-key", h.GenerateAPIKey)
 			r.Post("/delete-key/{id}", h.DeleteAPIKey)
 			r.Post("/delete/{id}", h.DeleteArticle)
@@ -97,6 +98,7 @@ func New(dbPath string) (*Server, error) {
 
 		r.Post("/save", h.APISave)
 		r.Get("/export", h.APIExport)
+		r.Get("/article/{id}", h.APIReadArticle)
 		r.Get("/read/{id}", h.ReadMobilePage)
 		r.Post("/delete", h.APIDeleteArticles)
 	})
@@ -141,7 +143,7 @@ func loadTemplates() *template.Template {
 			}
 			return s
 		},
-		"add": func(a, b int) int { return a + b },
+		"add":      func(a, b int) int { return a + b },
 		"subtract": func(a, b int) int { return a - b },
 		"multiply": func(a, b int) int { return a * b },
 	}

@@ -14,8 +14,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/alexedwards/scs/v2"
 	"github.com/alexedwards/scs/sqlite3store"
+	"github.com/alexedwards/scs/v2"
 	"github.com/readflow/readflow/internal/model"
 	"github.com/readflow/readflow/internal/store"
 )
@@ -219,6 +219,56 @@ func TestSaveAPI_URL(t *testing.T) {
 	}
 }
 
+func TestSaveLink(t *testing.T) {
+	h := setupTestHandler(t)
+
+	body := map[string]string{
+		"url":        "https://example.com/from-link",
+		"csrf_token": "test-csrf",
+	}
+	b, _ := json.Marshal(body)
+	req := httptest.NewRequest("POST", "/save-link", bytes.NewReader(b))
+	req.Header.Set("Content-Type", "application/json")
+	rec := httptest.NewRecorder()
+	h.SM.LoadAndSave(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		h.SM.Put(r.Context(), "csrf_token", "test-csrf")
+		h.SaveLink(w, r)
+	})).ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("save link: expected 200, got %d: %s", rec.Code, rec.Body.String())
+	}
+
+	var resp map[string]interface{}
+	if err := json.Unmarshal(rec.Body.Bytes(), &resp); err != nil {
+		t.Fatalf("parse save link response: %v", err)
+	}
+	if resp["status"] != "created" && resp["status"] != "duplicate" {
+		t.Fatalf("expected created or duplicate, got %v", resp["status"])
+	}
+}
+
+func TestSaveLink_InvalidCSRF(t *testing.T) {
+	h := setupTestHandler(t)
+
+	body := map[string]string{
+		"url":        "https://example.com/from-link",
+		"csrf_token": "wrong-csrf",
+	}
+	b, _ := json.Marshal(body)
+	req := httptest.NewRequest("POST", "/save-link", bytes.NewReader(b))
+	req.Header.Set("Content-Type", "application/json")
+	rec := httptest.NewRecorder()
+	h.SM.LoadAndSave(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		h.SM.Put(r.Context(), "csrf_token", "test-csrf")
+		h.SaveLink(w, r)
+	})).ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusForbidden {
+		t.Fatalf("invalid csrf: expected 403, got %d: %s", rec.Code, rec.Body.String())
+	}
+}
+
 func TestSaveAPI_InvalidRequest(t *testing.T) {
 	h := setupTestHandler(t)
 
@@ -274,6 +324,76 @@ func TestExportAPI(t *testing.T) {
 	result := resp.Results[0]
 	if result.Title != "Export Test" {
 		t.Fatalf("expected 'Export Test', got '%s'", result.Title)
+	}
+}
+
+func TestExportAPI_WithoutContent(t *testing.T) {
+	h := setupTestHandler(t)
+
+	a := testArticle("export-summary-1", "Export Summary", "export", time.Now())
+	a.ContentHTML = "<p>Large article body</p>"
+	a.ContentMD = "Large article body"
+	h.Store.CreateArticle(a)
+
+	req := httptest.NewRequest("GET", "/api/v1/export?limit=10&content=false", nil)
+	rec := httptest.NewRecorder()
+	h.APIExport(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("export summary API: expected 200, got %d: %s", rec.Code, rec.Body.String())
+	}
+
+	var resp model.ExportResponse
+	if err := json.Unmarshal(rec.Body.Bytes(), &resp); err != nil {
+		t.Fatalf("parse export summary response: %v", err)
+	}
+	if len(resp.Results) != 1 {
+		t.Fatalf("expected 1 result, got %d", len(resp.Results))
+	}
+	result := resp.Results[0]
+	if result.Title != "Export Summary" {
+		t.Fatalf("expected title metadata, got %q", result.Title)
+	}
+	if result.ContentHTML != "" || result.ContentMarkdown != "" {
+		t.Fatal("content=false should omit article body fields")
+	}
+}
+
+func TestExportAPI_WithoutCount(t *testing.T) {
+	h := setupTestHandler(t)
+
+	for i := 0; i < 3; i++ {
+		a := testArticle(fmt.Sprintf("summary-page-%d", i), fmt.Sprintf("Summary Page %d", i), "export", time.Now().Add(time.Duration(i)*time.Second))
+		a.ContentHTML = "<p>Large article body</p>"
+		h.Store.CreateArticle(a)
+	}
+
+	req := httptest.NewRequest("GET", "/api/v1/export?limit=2&content=false&count=false", nil)
+	rec := httptest.NewRecorder()
+	h.APIExport(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("export no-count API: expected 200, got %d: %s", rec.Code, rec.Body.String())
+	}
+
+	var resp model.ExportResponse
+	if err := json.Unmarshal(rec.Body.Bytes(), &resp); err != nil {
+		t.Fatalf("parse export no-count response: %v", err)
+	}
+	if len(resp.Results) != 2 {
+		t.Fatalf("expected 2 results, got %d", len(resp.Results))
+	}
+	if !resp.HasMore {
+		t.Fatal("expected has_more=true")
+	}
+	if resp.Next == "" {
+		t.Fatal("expected next link")
+	}
+	if resp.Count != 2 {
+		t.Fatalf("expected visible count 2, got %d", resp.Count)
+	}
+	if resp.Results[0].ContentHTML != "" || resp.Results[0].ContentMarkdown != "" {
+		t.Fatal("count=false summary response should omit article body fields")
 	}
 }
 
@@ -349,6 +469,42 @@ func TestExportAPI_Pagination(t *testing.T) {
 	}
 }
 
+func TestReadArticleAPI(t *testing.T) {
+	h := setupTestHandler(t)
+
+	a := testArticle("api-read-1", "API Readable Article", "url", time.Now())
+	a.ContentHTML = "<p>Article content for mini program</p>"
+	h.Store.CreateArticle(a)
+
+	req := httptest.NewRequest("GET", "/api/v1/article/api-read-1", nil)
+	req.SetPathValue("id", "api-read-1")
+	rec := httptest.NewRecorder()
+	h.APIReadArticle(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("read article API: expected 200, got %d: %s", rec.Code, rec.Body.String())
+	}
+
+	var resp model.ArticleExport
+	if err := json.Unmarshal(rec.Body.Bytes(), &resp); err != nil {
+		t.Fatalf("parse read article response: %v", err)
+	}
+	if resp.ID != "api-read-1" {
+		t.Fatalf("expected article id api-read-1, got %s", resp.ID)
+	}
+	if !strings.Contains(resp.ContentHTML, "mini program") {
+		t.Fatal("response should include content_html")
+	}
+
+	req = httptest.NewRequest("GET", "/api/v1/article/missing", nil)
+	req.SetPathValue("id", "missing")
+	rec = httptest.NewRecorder()
+	h.APIReadArticle(rec, req)
+	if rec.Code != http.StatusNotFound {
+		t.Fatalf("missing article: expected 404, got %d", rec.Code)
+	}
+}
+
 func TestReadPage(t *testing.T) {
 	h := setupTestHandler(t)
 
@@ -373,6 +529,9 @@ func TestReadPage(t *testing.T) {
 	}
 	if !strings.Contains(body, "link") {
 		t.Fatal("response should contain link in content")
+	}
+	if !strings.Contains(body, `/static/app.js?v=`) {
+		t.Fatal("read page should load versioned app script")
 	}
 
 	// Not found
@@ -404,6 +563,47 @@ func TestReadPage_ExtractionFailed(t *testing.T) {
 	body := rec.Body.String()
 	if !strings.Contains(body, "Open Original") && !strings.Contains(body, "open-original") && !strings.Contains(body, "Open in New Tab") {
 		t.Fatal("extraction-failed page should have fallback UI")
+	}
+}
+
+func TestReadMobilePage(t *testing.T) {
+	h := setupTestHandler(t)
+
+	a := testArticle("mobile-read-1", "Mobile Article", "url", time.Now())
+	a.URL = "https://example.com/base/article"
+	a.ContentHTML = "<p>Article content with a <a href='/link'>link</a></p>"
+	h.Store.CreateArticle(a)
+
+	req := httptest.NewRequest("GET", "/api/v1/read/mobile-read-1?api_key=Bearer%20rf_test", nil)
+	req.SetPathValue("id", "mobile-read-1")
+	rec := httptest.NewRecorder()
+	h.ReadMobilePage(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("mobile read page: expected 200, got %d", rec.Code)
+	}
+	body := rec.Body.String()
+	if !strings.Contains(body, `meta name="api-key" content="rf_test"`) {
+		t.Fatal("mobile read page should expose raw api key to external script")
+	}
+	if !strings.Contains(body, `/static/mobile_read.js?v=`) {
+		t.Fatal("mobile read page should load versioned mobile script")
+	}
+	if !strings.Contains(body, `data-base-url="https://example.com/base/article"`) {
+		t.Fatal("mobile read page should include base URL for link resolution")
+	}
+}
+
+func TestExportAPI_NegativePagination(t *testing.T) {
+	h := setupTestHandler(t)
+	h.Store.CreateArticle(testArticle("neg-1", "Negative Pagination", "url", time.Now()))
+
+	req := httptest.NewRequest("GET", "/api/v1/export?limit=-1&offset=-5&content=false&count=false", nil)
+	rec := httptest.NewRecorder()
+	h.APIExport(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("negative pagination: expected 200, got %d: %s", rec.Code, rec.Body.String())
 	}
 }
 

@@ -1,17 +1,29 @@
 <view class="container">
   <view class="header">
-    <text class="title">Inbox</text>
+    <view class="header-main">
+      <text class="title">Inbox</text>
+      <text class="count" wx:if="{{total > 0}}">{{total}}{{hasMore ? '+' : ''}} articles</text>
+    </view>
     <view class="header-right">
-      <text class="count" wx:if="{{total > 0}}">{{total}} articles</text>
+      <text class="save-link" bindtap="openSave">+ Save</text>
       <text class="settings-link" bindtap="openSettings">Settings</text>
     </view>
   </view>
+
+  <view wx:if="{{refreshing}}" class="refreshing">Refreshing...</view>
 
   <block wx:if="{{loading}}">
     <view class="loading">Loading...</view>
   </block>
 
-  <block wx:elif="{{articles.length === 0}}">
+  <block wx:elif="{{error}}">
+    <view class="empty">
+      <text>{{error}}</text>
+      <button class="btn-page retry-button" bindtap="loadArticles" size="mini">Retry</button>
+    </view>
+  </block>
+
+  <block wx:elif="{{!articles.length}}">
     <view class="empty">
       <text>No articles yet.</text>
       <text class="empty-hint">Save articles via the browser extension or web app.</text>
@@ -26,11 +38,6 @@
         wx:key="id"
         bindtap="openArticle"
         data-id="{{item.id}}"
-        data-title="{{item.title}}"
-        data-html="{{item.content_html}}"
-        data-url="{{item.url}}"
-        data-author="{{item.author}}"
-        data-sitename="{{item.site_name}}"
       >
         <view class="card-main">
           <text class="article-title">{{item.title}}</text>
@@ -48,9 +55,9 @@
       </view>
     </view>
 
-    <view class="pagination" wx:if="{{total > limit}}">
+    <view class="pagination" wx:if="{{page > 1 || hasMore}}">
       <button class="btn-page" wx:if="{{page > 1}}" bindtap="prevPage" size="mini">Previous</button>
-      <button class="btn-page" wx:if="{{total > page * limit}}" bindtap="nextPage" size="mini">Next</button>
+      <button class="btn-page" wx:if="{{hasMore}}" bindtap="nextPage" size="mini">Next</button>
     </view>
   </block>
 </view>

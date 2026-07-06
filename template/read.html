@@ -38,14 +38,15 @@
             </div>
         </div>
         {{else}}
-        <div class="article-content">{{safeHTML .Article.ContentHTML}}</div>
+        <div class="article-content" data-base-url="{{.Article.URL}}">{{safeHTML .Article.ContentHTML}}</div>
         {{end}}
     </article>
 </div>
 
 <div id="link-menu" class="link-menu hidden">
     <button class="lm-save">📥 Save to Read Later</button>
-    <button class="lm-open">🔗 Open in New Tab</button>
+    <button class="lm-open">🔗 Open Link</button>
+    <button class="lm-copy">📋 Copy Link</button>
 </div>
 <div id="toast" class="toast hidden"></div>
 {{template "footer" .}}{{end}}

@@ -1,0 +1,21 @@
+<view class="container">
+  <view class="form">
+    <view class="form-group">
+      <text class="label">URL</text>
+      <input
+        class="input"
+        placeholder="https://example.com/article"
+        value="{{url}}"
+        bindinput="onUrlChange"
+        type="text"
+      />
+    </view>
+
+    <view wx:if="{{error}}" class="error">{{error}}</view>
+
+    <button class="btn-primary" loading="{{saving}}" disabled="{{saving}}" bindtap="saveArticle">
+      {{saving ? 'Saving...' : 'Save to Read Later'}}
+    </button>
+    <button class="btn-secondary" disabled="{{saving}}" bindtap="pasteFromClipboard">Paste Link</button>
+  </view>
+</view>

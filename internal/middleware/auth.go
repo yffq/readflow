@@ -21,6 +21,14 @@ func AuthRequired(sm *scs.SessionManager) func(http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			userID := sm.GetString(r.Context(), "user_id")
 			if userID == "" {
+				acceptsJSON := strings.Contains(r.Header.Get("Accept"), "application/json")
+				isFetch := strings.EqualFold(r.Header.Get("X-Requested-With"), "XMLHttpRequest")
+				if acceptsJSON || isFetch {
+					w.Header().Set("Content-Type", "application/json")
+					w.WriteHeader(http.StatusUnauthorized)
+					w.Write([]byte(`{"error":"login required"}`))
+					return
+				}
 				http.Redirect(w, r, "/login", http.StatusSeeOther)
 				return
 			}
@@ -40,19 +48,14 @@ func GetUserID(r *http.Request) string {
 func APIKeyAuth(s *store.Store) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			auth := r.Header.Get("Authorization")
-			if auth == "" {
-				auth = r.URL.Query().Get("api_key")
-			}
-
-			if auth == "" || !strings.HasPrefix(auth, "Bearer ") {
+			key := APIKeyFromRequest(r)
+			if key == "" {
 				w.Header().Set("Content-Type", "application/json")
 				w.WriteHeader(http.StatusUnauthorized)
 				w.Write([]byte(`{"error":"unauthorized"}`))
 				return
 			}
 
-			key := strings.TrimPrefix(auth, "Bearer ")
 			hash := sha256.Sum256([]byte(key))
 			keyHash := hex.EncodeToString(hash[:])
 
@@ -66,6 +69,23 @@ func APIKeyAuth(s *store.Store) func(http.Handler) http.Handler {
 			next.ServeHTTP(w, r)
 		})
 	}
+}
+
+func APIKeyFromRequest(r *http.Request) string {
+	auth := strings.TrimSpace(r.Header.Get("Authorization"))
+	if auth == "" {
+		auth = strings.TrimSpace(r.URL.Query().Get("api_key"))
+	}
+	if auth == "" {
+		return ""
+	}
+	if strings.HasPrefix(strings.ToLower(auth), "bearer ") {
+		return strings.TrimSpace(auth[7:])
+	}
+	if strings.HasPrefix(auth, "rf_") {
+		return auth
+	}
+	return ""
 }
 
 func SecureHeaders(next http.Handler) http.Handler {

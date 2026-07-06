@@ -1,1 +1,69 @@
-<web-view src="{{url}}"></web-view>
+<view class="container">
+  <view wx:if="{{loading}}" class="state">Loading...</view>
+
+  <view wx:elif="{{error}}" class="state error">
+    <text>{{error}}</text>
+  </view>
+
+  <view wx:elif="{{article}}" class="article">
+    <view class="article-header">
+      <text class="article-title">{{article.title}}</text>
+      <view class="article-byline">
+        <text wx:if="{{article.site_name}}" class="site">{{article.site_name}}</text>
+        <text wx:if="{{article.author}}">by {{article.author}}</text>
+        <text wx:if="{{article.word_count}}">{{article.word_count}} words</text>
+      </view>
+      <view wx:if="{{article.url}}" class="original-link" bindtap="copyOriginalUrl">
+        <text class="original-label">Copy original link</text>
+      </view>
+    </view>
+
+    <view wx:if="{{article.extraction_failed}}" class="notice">
+      Readflow could not extract the full content of this page.
+    </view>
+
+    <view wx:if="{{blocks.length}}" class="article-body">
+      <block wx:for="{{blocks}}" wx:key="index" wx:for-item="block">
+        <view wx:if="{{block.type === 'heading'}}" class="content-block heading heading-{{block.level}}">
+          <block wx:for="{{block.segments}}" wx:key="index" wx:for-item="seg">
+            <text wx:if="{{seg.type === 'link'}}" class="content-link" data-url="{{seg.url}}" bindtap="onLinkTap">{{seg.text}}</text>
+            <text wx:else>{{seg.text}}</text>
+          </block>
+        </view>
+
+        <view wx:elif="{{block.type === 'quote'}}" class="content-block quote">
+          <block wx:for="{{block.segments}}" wx:key="index" wx:for-item="seg">
+            <text wx:if="{{seg.type === 'link'}}" class="content-link" data-url="{{seg.url}}" bindtap="onLinkTap">{{seg.text}}</text>
+            <text wx:else>{{seg.text}}</text>
+          </block>
+        </view>
+
+        <view wx:elif="{{block.type === 'pre'}}" class="content-block pre">
+          <block wx:for="{{block.segments}}" wx:key="index" wx:for-item="seg">
+            <text>{{seg.text}}</text>
+          </block>
+        </view>
+
+        <view wx:elif="{{block.type === 'li'}}" class="content-block list-item">
+          <text class="list-marker">{{block.marker}}</text>
+          <view class="list-content">
+            <block wx:for="{{block.segments}}" wx:key="index" wx:for-item="seg">
+              <text wx:if="{{seg.type === 'link'}}" class="content-link" data-url="{{seg.url}}" bindtap="onLinkTap">{{seg.text}}</text>
+              <text wx:else>{{seg.text}}</text>
+            </block>
+          </view>
+        </view>
+
+        <image wx:elif="{{block.type === 'image'}}" class="content-image" src="{{block.src}}" mode="widthFix" />
+
+        <view wx:else class="content-block paragraph">
+          <block wx:for="{{block.segments}}" wx:key="index" wx:for-item="seg">
+            <text wx:if="{{seg.type === 'link'}}" class="content-link" data-url="{{seg.url}}" bindtap="onLinkTap">{{seg.text}}</text>
+            <text wx:else>{{seg.text}}</text>
+          </block>
+        </view>
+      </block>
+    </view>
+    <view wx:else class="state">No content.</view>
+  </view>
+</view>

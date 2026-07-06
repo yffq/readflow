@@ -1,14 +1,22 @@
 .header {
   display: flex;
   justify-content: space-between;
-  align-items: baseline;
+  align-items: center;
   padding: 16px 0 12px;
+  gap: 14px;
+}
+
+.header-main {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
 }
 
 .header-right {
   display: flex;
-  align-items: baseline;
-  gap: 12px;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
 }
 
 .title {
@@ -17,8 +25,10 @@
 }
 
 .count {
+  display: block;
   font-size: 13px;
   color: #8a857d;
+  margin-top: 2px;
 }
 
 .loading, .empty {
@@ -27,11 +37,26 @@
   color: #8a857d;
 }
 
+.refreshing {
+  margin: 0 0 10px;
+  padding: 8px 12px;
+  text-align: center;
+  color: #b5a48b;
+  background: #242424;
+  border: 1px solid #303030;
+  border-radius: 8px;
+  font-size: 13px;
+}
+
 .empty-hint {
   display: block;
   font-size: 13px;
   margin-top: 4px;
   color: #6b6660;
+}
+
+.retry-button {
+  margin-top: 14px;
 }
 
 .article-list {
@@ -90,8 +115,16 @@
 }
 
 .settings-link {
+  padding: 7px 0 7px 8px;
   font-size: 13px;
   color: #b5a48b;
+}
+
+.save-link {
+  padding: 7px 0 7px 8px;
+  font-size: 13px;
+  color: #b5a48b;
+  font-weight: 600;
 }
 
 .card-delete {

@@ -3,6 +3,10 @@ const app = getApp()
 function request(path, options = {}) {
   const { apiUrl, apiKey } = app.globalData
   return new Promise((resolve, reject) => {
+    if (!apiUrl || !apiKey) {
+      reject({ error: 'API URL or API key is missing' })
+      return
+    }
     wx.request({
       url: apiUrl.replace(/\/$/, '') + path,
       method: options.method || 'GET',
@@ -15,7 +19,7 @@ function request(path, options = {}) {
         if (res.statusCode >= 200 && res.statusCode < 300) {
           resolve(res.data)
         } else {
-          reject(res.data)
+          reject(Object.assign({ statusCode: res.statusCode }, res.data || {}))
         }
       },
       fail(err) {
@@ -26,7 +30,15 @@ function request(path, options = {}) {
 }
 
 function fetchArticles(limit = 20, offset = 0) {
-  return request(`/api/v1/export?limit=${limit}&offset=${offset}`)
+  return request(`/api/v1/export?limit=${limit}&offset=${offset}&content=false&count=false`)
+}
+
+function fetchArticleSummaries(limit = 20, offset = 0) {
+  return request(`/api/v1/export?limit=${limit}&offset=${offset}&content=false`)
+}
+
+function fetchArticle(id) {
+  return request('/api/v1/article/' + encodeURIComponent(id))
 }
 
 function deleteArticles(ids) {
@@ -43,4 +55,4 @@ function saveArticle(url) {
   })
 }
 
-module.exports = { fetchArticles, deleteArticles, saveArticle }
+module.exports = { fetchArticles, fetchArticleSummaries, fetchArticle, deleteArticles, saveArticle }

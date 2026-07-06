@@ -157,11 +157,7 @@ func (h *Handler) ReadPage(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) ReadMobilePage(w http.ResponseWriter, r *http.Request) {
-	apiKey := r.URL.Query().Get("api_key")
-	if apiKey == "" {
-		apiKey = r.Header.Get("Authorization")
-		apiKey = strings.TrimPrefix(apiKey, "Bearer ")
-	}
+	apiKey := middleware.APIKeyFromRequest(r)
 
 	id := r.PathValue("id")
 	if id == "" {
@@ -204,6 +200,29 @@ func (h *Handler) SaveForm(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	h.render(w, r, "page_save", map[string]any{"Error": "Please provide a URL or paste article content."})
+}
+
+func (h *Handler) SaveLink(w http.ResponseWriter, r *http.Request) {
+	sessionToken := h.getSessionString(r.Context(), "csrf_token")
+
+	var req struct {
+		URL       string `json:"url"`
+		CSRFToken string `json:"csrf_token"`
+	}
+	if err := decodeJSON(r, &req); err != nil {
+		h.jsonError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+	if sessionToken == "" || req.CSRFToken != sessionToken {
+		h.jsonError(w, http.StatusForbidden, "invalid csrf token")
+		return
+	}
+	if strings.TrimSpace(req.URL) == "" {
+		h.jsonError(w, http.StatusBadRequest, "url is required")
+		return
+	}
+
+	h.saveURL(w, r, &model.SaveRequest{URL: req.URL})
 }
 
 func (h *Handler) SettingsPage(w http.ResponseWriter, r *http.Request) {
@@ -332,7 +351,50 @@ func (h *Handler) APIExport(w http.ResponseWriter, r *http.Request) {
 	}
 	limit := intValue(r.URL.Query().Get("limit"), 100)
 	offset := intValue(r.URL.Query().Get("offset"), 0)
-	articles, total, err := h.Store.ListArticlesSince(updatedAfter, limit, offset)
+	if limit <= 0 {
+		limit = 100
+	}
+	if offset < 0 {
+		offset = 0
+	}
+	includeContent := r.URL.Query().Get("content") != "false"
+	includeCount := r.URL.Query().Get("count") != "false"
+	var articles []model.ArticleExport
+	var total int
+	var err error
+
+	if !includeContent && !includeCount {
+		articles, err = h.Store.ListArticleSummaryPageSince(updatedAfter, limit+1, offset)
+		if err != nil {
+			h.jsonError(w, http.StatusInternalServerError, "failed to query articles")
+			return
+		}
+		hasMore := len(articles) > limit
+		if hasMore {
+			articles = articles[:limit]
+		}
+		var next string
+		if hasMore {
+			params := url.Values{}
+			if updatedAfterStr != "" {
+				params.Set("updated_after", updatedAfterStr)
+			}
+			params.Set("content", "false")
+			params.Set("count", "false")
+			params.Set("limit", fmt.Sprint(limit))
+			params.Set("offset", fmt.Sprint(offset+limit))
+			next = "/api/v1/export?" + params.Encode()
+		}
+		resp := model.ExportResponse{Count: offset + len(articles), Next: next, HasMore: hasMore, Results: articles}
+		writeJSON(w, http.StatusOK, resp)
+		return
+	}
+
+	if includeContent {
+		articles, total, err = h.Store.ListArticlesSince(updatedAfter, limit, offset)
+	} else {
+		articles, total, err = h.Store.ListArticleSummariesSince(updatedAfter, limit, offset)
+	}
 	if err != nil {
 		h.jsonError(w, http.StatusInternalServerError, "failed to query articles")
 		return
@@ -343,12 +405,51 @@ func (h *Handler) APIExport(w http.ResponseWriter, r *http.Request) {
 		if updatedAfterStr != "" {
 			params.Set("updated_after", updatedAfterStr)
 		}
+		if !includeContent {
+			params.Set("content", "false")
+		}
+		if !includeCount {
+			params.Set("count", "false")
+		}
 		params.Set("limit", fmt.Sprint(limit))
 		params.Set("offset", fmt.Sprint(offset+limit))
 		next = "/api/v1/export?" + params.Encode()
 	}
-	resp := model.ExportResponse{Count: total, Next: next, Results: articles}
+	resp := model.ExportResponse{Count: total, Next: next, HasMore: next != "", Results: articles}
 	writeJSON(w, http.StatusOK, resp)
+}
+
+func (h *Handler) APIReadArticle(w http.ResponseWriter, r *http.Request) {
+	id := r.PathValue("id")
+	if id == "" {
+		h.jsonError(w, http.StatusNotFound, "article not found")
+		return
+	}
+	article, err := h.Store.GetArticle(id)
+	if err != nil {
+		h.jsonError(w, http.StatusInternalServerError, "failed to query article")
+		return
+	}
+	if article == nil {
+		h.jsonError(w, http.StatusNotFound, "article not found")
+		return
+	}
+
+	writeJSON(w, http.StatusOK, model.ArticleExport{
+		ID:               article.ID,
+		Title:            article.Title,
+		URL:              article.URL,
+		ContentHTML:      article.ContentHTML,
+		ContentMarkdown:  article.ContentMD,
+		Author:           article.Author,
+		SiteName:         article.SiteName,
+		WordCount:        article.WordCount,
+		Source:           article.Source,
+		ExtractionFailed: article.ExtractionFailed,
+		Status:           article.Status,
+		CreatedAt:        article.CreatedAt,
+		UpdatedAt:        article.UpdatedAt,
+	})
 }
 
 func (h *Handler) DeleteArticle(w http.ResponseWriter, r *http.Request) {

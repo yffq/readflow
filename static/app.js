@@ -1,6 +1,8 @@
 (function () {
   const linkMenu = document.getElementById('link-menu');
   const toast = document.getElementById('toast');
+  const csrfMeta = document.querySelector('meta[name="csrf-token"]');
+  const csrfToken = csrfMeta ? csrfMeta.getAttribute('content') : '';
   let menuTargetUrl = '';
 
   function showToast(msg) {
@@ -15,14 +17,68 @@
     if (linkMenu) linkMenu.classList.add('hidden');
   }
 
+  function resolveLinkUrl(rawUrl) {
+    if (!rawUrl) return '';
+    var value = rawUrl.trim();
+    if (!value || value.startsWith('#') || value.toLowerCase().startsWith('mailto:') || value.toLowerCase().startsWith('javascript:')) {
+      return '';
+    }
+    var base = content ? (content.dataset.baseUrl || window.location.href) : window.location.href;
+    try {
+      return new URL(value, base).href;
+    } catch (_) {
+      return value;
+    }
+  }
+
+  function prepareArticleLinks(root) {
+    root.querySelectorAll('a[href]').forEach(function (link) {
+      var url = resolveLinkUrl(link.getAttribute('href'));
+      if (!url) return;
+      link.setAttribute('data-rf-url', url);
+      link.setAttribute('role', 'button');
+      link.removeAttribute('href');
+    });
+  }
+
+  function closestArticleLink(node) {
+    if (!node || !node.closest) return null;
+    return node.closest('a[data-rf-url]');
+  }
+
+  function copyText(text) {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      return navigator.clipboard.writeText(text);
+    }
+    return new Promise(function (resolve, reject) {
+      var textarea = document.createElement('textarea');
+      textarea.value = text;
+      textarea.setAttribute('readonly', '');
+      textarea.style.position = 'fixed';
+      textarea.style.left = '-9999px';
+      document.body.appendChild(textarea);
+      textarea.select();
+      try {
+        if (document.execCommand('copy')) resolve();
+        else reject(new Error('copy failed'));
+      } catch (err) {
+        reject(err);
+      } finally {
+        document.body.removeChild(textarea);
+      }
+    });
+  }
+
   function showLinkMenu(x, y, url) {
     if (!linkMenu) return;
     menuTargetUrl = url;
     linkMenu.querySelector('.lm-save').dataset.url = url;
     linkMenu.querySelector('.lm-open').dataset.url = url;
+    linkMenu.querySelector('.lm-copy').dataset.url = url;
+    linkMenu.classList.remove('hidden');
 
-    var menuWidth = 220;
-    var menuHeight = 88;
+    var menuWidth = linkMenu.offsetWidth || 220;
+    var menuHeight = linkMenu.offsetHeight || 132;
     var left = Math.min(x, window.innerWidth - menuWidth - 10);
     var top = Math.min(y, window.innerHeight - menuHeight - 10);
     left = Math.max(10, left);
@@ -30,33 +86,36 @@
 
     linkMenu.style.left = left + 'px';
     linkMenu.style.top = top + 'px';
-    linkMenu.classList.remove('hidden');
     setTimeout(() => menuTargetUrl = url, 0);
   }
 
   // Long-press / right-click on links in article content to show menu
   var content = document.querySelector('.article-content');
   var longPressTimer = null;
+  var suppressNextLinkClick = false;
 
   if (content) {
+    prepareArticleLinks(content);
+
     content.addEventListener('contextmenu', function (e) {
-      var a = e.target.closest('a[href]');
+      var a = closestArticleLink(e.target);
       if (!a) return;
-      var href = a.getAttribute('href');
-      if (!href || href.startsWith('#') || href.startsWith('mailto:') || href.startsWith('javascript:')) return;
+      var href = a.getAttribute('data-rf-url');
+      if (!href) return;
       e.preventDefault();
       showLinkMenu(e.clientX, e.clientY, href);
     });
 
     content.addEventListener('touchstart', function (e) {
-      var a = e.target.closest('a[href]');
+      var a = closestArticleLink(e.target);
       if (!a) return;
-      var href = a.getAttribute('href');
-      if (!href || href.startsWith('#') || href.startsWith('mailto:') || href.startsWith('javascript:')) return;
+      var href = a.getAttribute('data-rf-url');
+      if (!href) return;
 
       var touch = e.touches[0];
       longPressTimer = setTimeout(function () {
         longPressTimer = null;
+        suppressNextLinkClick = true;
         showLinkMenu(touch.clientX, touch.clientY, href);
       }, 500);
     });
@@ -74,28 +133,107 @@
         longPressTimer = null;
       }
     });
+
+    content.addEventListener('click', function (e) {
+      var a = closestArticleLink(e.target);
+      if (!a) return;
+      var href = a.getAttribute('data-rf-url');
+      if (!href) return;
+      if (suppressNextLinkClick) {
+        suppressNextLinkClick = false;
+        e.preventDefault();
+        e.stopPropagation();
+        return;
+      }
+      e.preventDefault();
+      e.stopPropagation();
+      showLinkMenu(e.clientX || window.innerWidth / 2, e.clientY || window.innerHeight / 2, href);
+    }, true);
   }
 
   if (linkMenu) {
-    linkMenu.querySelector('.lm-save').addEventListener('click', function () {
-      var url = menuTargetUrl;
-      hideLinkMenu();
-      if (!url) return;
+    var saveButton = linkMenu.querySelector('.lm-save');
+    var saveButtonText = saveButton ? saveButton.textContent : '📥 Save to Read Later';
 
-      var body = 'url=' + encodeURIComponent(url) + '&csrf_token=' + encodeURIComponent(csrfToken);
-      fetch('/save', {
+    function setSaveButtonState(text, disabled) {
+      if (!saveButton) return;
+      saveButton.textContent = text;
+      saveButton.disabled = !!disabled;
+    }
+
+    function resetSaveButtonSoon(delay) {
+      setTimeout(function () {
+        setSaveButtonState(saveButtonText, false);
+      }, delay || 1200);
+    }
+
+    saveButton.addEventListener('click', function (e) {
+      e.preventDefault();
+      e.stopPropagation();
+      var url = menuTargetUrl;
+      if (!url) {
+        showToast('No link selected.');
+        return;
+      }
+      if (!csrfToken) {
+        var missingTokenMessage = 'Unable to save: missing session token. Please refresh and try again.';
+        setSaveButtonState('Failed to save', true);
+        showToast(missingTokenMessage);
+        resetSaveButtonSoon(1800);
+        return;
+      }
+
+      setSaveButtonState('Saving...', true);
+      showToast('Saving to Read Later...');
+      fetch('/save-link', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: body
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json',
+          'X-Requested-With': 'XMLHttpRequest'
+        },
+        body: JSON.stringify({ url: url, csrf_token: csrfToken })
       })
-        .then(function () { showToast('Saved to Read Later'); })
-        .catch(function () { showToast('Failed to save.'); });
+        .then(function (res) {
+          var contentType = res.headers.get('content-type') || '';
+          if (res.redirected || !contentType.includes('application/json')) {
+            throw new Error('Unable to save. Please log in again and retry.');
+          }
+          return res.json().catch(function () { return {}; }).then(function (data) {
+            if (!res.ok) throw new Error(data.error || 'Failed to save.');
+            var message = data.status === 'duplicate' ? 'Already in Read Later' : 'Saved to Read Later';
+            setSaveButtonState(message, true);
+            showToast(message);
+            setTimeout(function () {
+              hideLinkMenu();
+              setSaveButtonState(saveButtonText, false);
+            }, 900);
+          });
+        })
+        .catch(function (err) {
+          var message = err.message || 'Failed to save.';
+          setSaveButtonState('Failed to save', true);
+          showToast(message);
+          resetSaveButtonSoon(1800);
+        });
     });
 
     linkMenu.querySelector('.lm-open').addEventListener('click', function () {
       var url = menuTargetUrl;
       hideLinkMenu();
       if (url) window.open(url, '_blank', 'noopener');
+    });
+
+    linkMenu.querySelector('.lm-copy').addEventListener('click', function () {
+      var url = menuTargetUrl;
+      hideLinkMenu();
+      if (!url) {
+        showToast('Failed to copy.');
+        return;
+      }
+      copyText(url)
+        .then(function () { showToast('Copied'); })
+        .catch(function () { showToast('Failed to copy.'); });
     });
   }
 

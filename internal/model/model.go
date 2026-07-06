@@ -59,7 +59,8 @@ type SaveRequest struct {
 }
 
 type ExportResponse struct {
-	Count   int              `json:"count"`
-	Next    string           `json:"next,omitempty"`
-	Results []ArticleExport  `json:"results"`
+	Count   int             `json:"count"`
+	Next    string          `json:"next,omitempty"`
+	HasMore bool            `json:"has_more,omitempty"`
+	Results []ArticleExport `json:"results"`
 }

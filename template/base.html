@@ -4,6 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>{{if .PageTitle}}{{.PageTitle}} - {{end}}Readflow</title>
+    {{if .UserID}}<meta name="csrf-token" content="{{.CSRFToken}}">{{end}}
     <link rel="stylesheet" href="/static/style.css">
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📖</text></svg>">
 </head>
@@ -13,10 +14,10 @@
         <a href="/" class="brand">📖 Readflow</a>
         <div class="nav-links">
             {{if .UserID}}
-                <a href="/">Inbox</a>
-                <a href="/save">+ Save</a>
-                <a href="/settings">Settings</a>
-                <a href="/logout">Logout</a>
+                <a href="/" class="nav-link">Inbox</a>
+                <a href="/save" class="nav-save">+ Save</a>
+                <a href="/settings" class="nav-link">Settings</a>
+                <a href="/logout" class="nav-link nav-logout">Logout</a>
             {{end}}
         </div>
     </div>
@@ -24,6 +25,6 @@
 <main class="main-content">{{end}}
 
 {{define "footer"}}</main>
-<script src="/static/app.js"></script>
+<script src="/static/app.js?v=20260705-5"></script>
 </body>
 </html>{{end}}

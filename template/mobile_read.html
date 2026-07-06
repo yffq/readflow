@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>{{.Article.Title}}</title>
+<meta name="api-key" content="{{.APIKey}}">
 <style>
 * { margin: 0; padding: 0; box-sizing: border-box; }
 body {
@@ -82,80 +83,17 @@ h1.article-title { font-size: 20px; font-weight: 700; margin-bottom: 8px; line-h
   <a href="{{.Article.URL}}">Open Original</a>
 </div>
 {{else}}
-<div class="article-content">{{safeHTML .Article.ContentHTML}}</div>
+<div class="article-content" data-base-url="{{.Article.URL}}">{{safeHTML .Article.ContentHTML}}</div>
 {{end}}
 
 <div id="link-menu" class="link-menu">
   <button class="lm-save">📥 Save to Read Later</button>
-  <button class="lm-open">🔗 Open in Browser</button>
+  <button class="lm-open">🔗 Open Link</button>
+  <button class="lm-copy">📋 Copy Link</button>
 </div>
 <div id="toast" class="toast"></div>
 
-<script>
-(function() {
-  var menu = document.getElementById('link-menu');
-  var toast = document.getElementById('toast');
-  var menuUrl = '';
-  var apiKey = '{{.APIKey}}';
-
-  function showToast(msg) {
-    toast.textContent = msg;
-    toast.classList.add('show');
-    clearTimeout(toast._t);
-    toast._t = setTimeout(function() { toast.classList.remove('show'); }, 2500);
-  }
-
-  function hideMenu() { menu.classList.remove('show'); }
-
-  function showMenu(x, y, url) {
-    menuUrl = url;
-    menu.style.left = Math.min(x, window.innerWidth - 200) + 'px';
-    menu.style.top = Math.min(y, window.innerHeight - 80) + 'px';
-    menu.classList.add('show');
-  }
-
-  var content = document.querySelector('.article-content');
-  if (content) {
-    var timer = null;
-    content.addEventListener('contextmenu', function(e) {
-      var a = e.target.closest('a[href]');
-      if (!a || !a.href || a.href.startsWith('#') || a.href.startsWith('mailto:') || a.href.startsWith('javascript:')) return;
-      e.preventDefault();
-      showMenu(e.clientX, e.clientY, a.href);
-    });
-    content.addEventListener('touchstart', function(e) {
-      var a = e.target.closest('a[href]');
-      if (!a || !a.href || a.href.startsWith('#') || a.href.startsWith('mailto:') || a.href.startsWith('javascript:')) return;
-      var t = e.touches[0];
-      timer = setTimeout(function() { showMenu(t.clientX, t.clientY, a.href); }, 500);
-    });
-    content.addEventListener('touchend', function() { if (timer) { clearTimeout(timer); timer = null; } });
-    content.addEventListener('touchmove', function() { if (timer) { clearTimeout(timer); timer = null; } });
-  }
-
-  document.querySelector('.lm-save').addEventListener('click', function() {
-    hideMenu();
-    if (!apiKey) { showToast('No API key configured'); return; }
-    fetch(location.origin + '/api/v1/save', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + apiKey },
-      body: JSON.stringify({ url: menuUrl })
-    }).then(function() { showToast('Saved!'); }).catch(function() { showToast('Failed'); });
-  });
-
-  document.querySelector('.lm-open').addEventListener('click', function() {
-    hideMenu();
-    var a = document.createElement('a');
-    a.href = menuUrl;
-    a.target = '_blank';
-    a.click();
-  });
-
-  document.addEventListener('click', function(e) {
-    if (menu && !menu.contains(e.target)) hideMenu();
-  });
-})();
-</script>
+<script src="/static/mobile_read.js?v=20260705-3"></script>
 </body>
 </html>
 {{end}}

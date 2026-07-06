@@ -7,7 +7,10 @@ Page({
     total: 0,
     page: 1,
     limit: 20,
-    loading: true
+    loading: true,
+    refreshing: false,
+    hasMore: false,
+    error: ''
   },
 
   onShow() {
@@ -16,16 +19,27 @@ Page({
   },
 
   onPullDownRefresh() {
-    this.setData({ page: 1 })
-    this.loadArticles(true).finally(() => wx.stopPullDownRefresh())
+    if (this.data.refreshing) {
+      wx.stopPullDownRefresh()
+      return
+    }
+    wx.showNavigationBarLoading()
+    this.setData({ page: 1, refreshing: true })
+    this.loadArticles(false).finally(() => {
+      this.setData({ refreshing: false })
+      wx.hideNavigationBarLoading()
+      wx.stopPullDownRefresh()
+    })
   },
 
   loadArticles(showLoading) {
     if (showLoading !== false && this.data.articles.length === 0) {
-      this.setData({ loading: true })
+      this.setData({ loading: true, error: '' })
+    } else {
+      this.setData({ error: '' })
     }
     const offset = (this.data.page - 1) * this.data.limit
-    return api.fetchArticles(this.data.limit, offset).then(res => {
+    return this.fetchArticlePage(this.data.limit, offset).then(res => {
       const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
       const articles = (res.results || []).map(a => {
         const d = a.saved_at ? new Date(a.saved_at) : null
@@ -35,14 +49,31 @@ Page({
       this.setData({
         articles,
         total: res.count || 0,
-        loading: false
+        hasMore: !!(res.has_more || res.next),
+        loading: false,
+        error: ''
       })
     }).catch(err => {
-      this.setData({ loading: false })
-      if (showLoading !== false) {
-        wx.showToast({ title: 'Failed to load', icon: 'none' })
-      }
+      const msg = this.errorMessage(err)
+      this.setData({ loading: false, error: msg })
+      wx.showToast({ title: msg, icon: 'none', duration: 3000 })
     })
+  },
+
+  fetchArticlePage(limit, offset) {
+    return api.fetchArticles(limit, offset).catch(err => {
+      return api.fetchArticleSummaries(limit, offset).catch(() => {
+        throw err
+      })
+    })
+  },
+
+  errorMessage(err) {
+    if (!err) return 'Failed to load'
+    if (err.error) return err.error
+    if (err.errMsg) return err.errMsg
+    if (err.statusCode) return 'Request failed: ' + err.statusCode
+    return 'Failed to load'
   },
 
   openArticle(e) {
@@ -61,11 +92,15 @@ Page({
   },
 
   deleteArticle(id) {
+    const previousArticles = this.data.articles
+    const previousTotal = this.data.total
+    const articles = previousArticles.filter(a => a.id !== id)
+    this.setData({ articles, total: Math.max(0, previousTotal - 1) })
+
     api.deleteArticles([id]).then(() => {
-      const articles = this.data.articles.filter(a => a.id !== id)
-      this.setData({ articles, total: this.data.total - 1 })
       wx.showToast({ title: 'Deleted', icon: 'success' })
     }).catch(() => {
+      this.setData({ articles: previousArticles, total: previousTotal })
       wx.showToast({ title: 'Failed', icon: 'none' })
     })
   },
@@ -76,8 +111,12 @@ Page({
   },
 
   nextPage() {
-    if (this.data.total <= this.data.page * this.data.limit) return
+    if (!this.data.hasMore) return
     this.setData({ page: this.data.page + 1 }, () => this.loadArticles())
+  },
+
+  openSave() {
+    wx.navigateTo({ url: '/pages/save/save' })
   },
 
   openSettings() {

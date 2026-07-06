@@ -1,0 +1,58 @@
+.form {
+  padding: 20px 0;
+}
+
+.form-group {
+  margin-bottom: 20px;
+}
+
+.label {
+  display: block;
+  font-size: 14px;
+  color: #8a857d;
+  margin-bottom: 8px;
+}
+
+.input {
+  width: 100%;
+  height: 44px;
+  background: #262626;
+  border: 1px solid #333;
+  border-radius: 8px;
+  padding: 0 12px;
+  color: #c5c0b8;
+  font-size: 15px;
+  box-sizing: border-box;
+}
+
+.error {
+  margin: 0 0 14px;
+  padding: 10px 12px;
+  color: #f2b8ad;
+  background: #3a1f1b;
+  border: 1px solid #5a2c25;
+  border-radius: 8px;
+  font-size: 13px;
+}
+
+.btn-primary,
+.btn-secondary {
+  width: 100%;
+  height: 44px;
+  border-radius: 8px;
+  font-size: 16px;
+}
+
+.btn-primary {
+  background: #7b6e5d;
+  color: #fff;
+  border: none;
+  margin-top: 10px;
+}
+
+.btn-secondary {
+  margin-top: 12px;
+  background: #262626;
+  color: #c5c0b8;
+  border: 1px solid #333;
+}
