@@ -10,6 +10,18 @@
     </view>
   </view>
 
+  <view class="controls" wx:if="{{articles.length || loading}}">
+    <view class="sort-control">
+      <text class="control-btn {{sortAsc ? '' : 'active'}}" bindtap="setSort" data-asc="{{false}}">Newest</text>
+      <text class="control-btn {{sortAsc ? 'active' : ''}}" bindtap="setSort" data-asc="{{true}}">Oldest</text>
+    </view>
+    <view class="limit-control">
+      <text class="control-btn {{limit === 20 ? 'active' : ''}}" bindtap="setLimit" data-limit="{{20}}">20</text>
+      <text class="control-btn {{limit === 50 ? 'active' : ''}}" bindtap="setLimit" data-limit="{{50}}">50</text>
+      <text class="control-btn {{limit === 100 ? 'active' : ''}}" bindtap="setLimit" data-limit="{{100}}">100</text>
+    </view>
+  </view>
+
   <view wx:if="{{refreshing}}" class="refreshing">Refreshing...</view>
 
   <block wx:if="{{loading}}">

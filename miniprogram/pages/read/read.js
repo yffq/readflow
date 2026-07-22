@@ -80,6 +80,29 @@ Page({
     const url = this.data.article && this.data.article.url
     if (!url) return
     this.copyLink(url)
+  },
+
+  confirmDelete() {
+    wx.showModal({
+      title: 'Delete article?',
+      success: (res) => {
+        if (res.confirm) this.deleteArticle()
+      }
+    })
+  },
+
+  deleteArticle() {
+    const id = this.data.article && this.data.article.id
+    if (!id) return
+    api.deleteArticles([id]).then(() => {
+      wx.showToast({ title: 'Deleted', icon: 'success' })
+      setTimeout(() => wx.navigateBack(), 800)
+    }).catch(err => {
+      wx.showToast({
+        title: (err && err.error) || 'Failed to delete',
+        icon: 'none'
+      })
+    })
   }
 })
 

@@ -1,7 +1,7 @@
 {{define "page_read"}}{{template "header" .}}
 <div class="reading-view">
     <div class="reading-header">
-        <a href="/" class="back-link">&larr; Back</a>
+        <a href="/" class="back-link" onclick="history.back();return false">&larr; Back</a>
         <div class="reading-actions">
             <form method="POST" action="/delete/{{.Article.ID}}" class="inline" onsubmit="return confirm('Delete this article?')">
                 <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
@@ -41,6 +41,13 @@
         <div class="article-content" data-base-url="{{.Article.URL}}">{{safeHTML .Article.ContentHTML}}</div>
         {{end}}
     </article>
+
+    <div class="reading-footer">
+        <form method="POST" action="/delete/{{.Article.ID}}" class="inline" onsubmit="return confirm('Delete this article?')">
+            <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+            <button class="btn-sm btn-danger">Delete</button>
+        </form>
+    </div>
 </div>
 
 <div id="link-menu" class="link-menu hidden">

@@ -62,6 +62,39 @@ page {
   border-radius: 8rpx;
 }
 
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 16rpx;
+  margin-top: 22rpx;
+}
+
+.delete-link {
+  flex-shrink: 0;
+}
+
+.delete-label {
+  display: inline-block;
+  font-size: 25rpx;
+  color: #d9705a;
+  background: #262626;
+  padding: 12rpx 20rpx;
+  border-radius: 8rpx;
+}
+
+.bottom-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 48rpx;
+  padding-top: 24rpx;
+  border-top: 1px solid #303030;
+}
+
+.bottom-delete .delete-label {
+  font-size: 28rpx;
+  padding: 14rpx 28rpx;
+}
+
 .notice {
   margin-bottom: 28rpx;
   padding: 20rpx 22rpx;

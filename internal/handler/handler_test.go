@@ -96,6 +96,15 @@ func withSession(h *Handler, handler func(w http.ResponseWriter, r *http.Request
 	}
 }
 
+func withCSRFSession(h *Handler, token string, handler func(w http.ResponseWriter, r *http.Request)) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		h.SM.LoadAndSave(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			h.SM.Put(r.Context(), "csrf_token", token)
+			handler(w, r)
+		})).ServeHTTP(w, r)
+	}
+}
+
 func TestSetupFlow(t *testing.T) {
 	h := setupTestHandler(t)
 
@@ -292,6 +301,29 @@ func TestSaveAPI_InvalidRequest(t *testing.T) {
 
 	if rec.Code != http.StatusBadRequest {
 		t.Fatalf("bad json: expected 400, got %d", rec.Code)
+	}
+}
+
+func TestSaveAPI_InvalidURL(t *testing.T) {
+	h := setupTestHandler(t)
+
+	for _, rawURL := range []string{
+		"ftp://example.com/file",
+		"http://localhost:8080",
+		"http://127.0.0.1:8080",
+		"http://192.168.1.1",
+		"http://169.254.169.254/latest/meta-data",
+	} {
+		body := model.SaveRequest{URL: rawURL}
+		b, _ := json.Marshal(body)
+		req := httptest.NewRequest("POST", "/api/v1/save", bytes.NewReader(b))
+		req.Header.Set("Content-Type", "application/json")
+		rec := httptest.NewRecorder()
+		h.APISave(rec, req)
+
+		if rec.Code != http.StatusBadRequest {
+			t.Fatalf("save invalid URL %q: expected 400, got %d: %s", rawURL, rec.Code, rec.Body.String())
+		}
 	}
 }
 
@@ -592,6 +624,12 @@ func TestReadMobilePage(t *testing.T) {
 	if !strings.Contains(body, `data-base-url="https://example.com/base/article"`) {
 		t.Fatal("mobile read page should include base URL for link resolution")
 	}
+	if !strings.Contains(body, `meta name="article-id" content="mobile-read-1"`) {
+		t.Fatal("mobile read page should include article-id meta tag")
+	}
+	if !strings.Contains(body, `delete-btn`) {
+		t.Fatal("mobile read page should include delete buttons")
+	}
 }
 
 func TestExportAPI_NegativePagination(t *testing.T) {
@@ -614,10 +652,12 @@ func TestDelete(t *testing.T) {
 	a.Status = "unread"
 	h.Store.CreateArticle(a)
 
-	req := httptest.NewRequest("POST", "/delete/arch-1", nil)
+	form := url.Values{"csrf_token": {"test-csrf"}}
+	req := httptest.NewRequest("POST", "/delete/arch-1", strings.NewReader(form.Encode()))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	req.SetPathValue("id", "arch-1")
 	rec := httptest.NewRecorder()
-	h.DeleteArticle(rec, req)
+	withCSRFSession(h, "test-csrf", h.DeleteArticle).ServeHTTP(rec, req)
 	if rec.Code != http.StatusSeeOther && rec.Code != http.StatusOK {
 		t.Fatalf("delete: expected 303 or 200, got %d", rec.Code)
 	}
@@ -625,6 +665,168 @@ func TestDelete(t *testing.T) {
 	got, _ := h.Store.GetArticle("arch-1")
 	if got != nil {
 		t.Fatal("article should be deleted")
+	}
+}
+
+func TestDelete_InvalidCSRF(t *testing.T) {
+	h := setupTestHandler(t)
+
+	a := testArticle("arch-csrf-1", "To Delete", "url", time.Now())
+	a.Status = "unread"
+	h.Store.CreateArticle(a)
+
+	req := httptest.NewRequest("POST", "/delete/arch-csrf-1", nil)
+	req.SetPathValue("id", "arch-csrf-1")
+	rec := httptest.NewRecorder()
+	withCSRFSession(h, "test-csrf", h.DeleteArticle).ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusForbidden {
+		t.Fatalf("delete without csrf: expected 403, got %d", rec.Code)
+	}
+	got, _ := h.Store.GetArticle("arch-csrf-1")
+	if got == nil {
+		t.Fatal("article should not be deleted without csrf")
+	}
+}
+
+func TestIndex_SortAndLimit(t *testing.T) {
+	h := setupTestHandler(t)
+
+	now := time.Now()
+	h.Store.CreateArticle(testArticle("idx-1", "Alpha", "url", now.Add(-3*time.Hour)))
+	h.Store.CreateArticle(testArticle("idx-2", "Beta", "url", now.Add(-2*time.Hour)))
+	h.Store.CreateArticle(testArticle("idx-3", "Gamma", "url", now.Add(-1*time.Hour)))
+
+	// Default: newest first (DESC)
+	req := httptest.NewRequest("GET", "/", nil)
+	rec := httptest.NewRecorder()
+	withSession(h, h.Index).ServeHTTP(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("index: expected 200, got %d", rec.Code)
+	}
+	body := rec.Body.String()
+	if !strings.Contains(body, "Inbox") {
+		t.Fatal("index should render Inbox heading")
+	}
+	if !strings.Contains(body, "Gamma") || !strings.Contains(body, "Alpha") {
+		t.Fatal("index desc: first should be Gamma (newest)")
+	}
+
+	// Sort ascending (oldest first)
+	req = httptest.NewRequest("GET", "/?sort=asc", nil)
+	rec = httptest.NewRecorder()
+	withSession(h, h.Index).ServeHTTP(rec, req)
+	body = rec.Body.String()
+	idxGamma := strings.Index(body, "Gamma")
+	idxAlpha := strings.Index(body, "Alpha")
+	if idxGamma < idxAlpha {
+		t.Fatalf("index asc: Alpha should appear before Gamma, got Alpha@%d Gamma@%d", idxAlpha, idxGamma)
+	}
+
+	// Sort controls present
+	if !strings.Contains(body, "sort-btn active") {
+		t.Fatal("index should have sort controls")
+	}
+	if !strings.Contains(body, "limit-btn") {
+		t.Fatal("index should have limit controls")
+	}
+
+	// Limit param
+	req = httptest.NewRequest("GET", "/?limit=50", nil)
+	rec = httptest.NewRecorder()
+	withSession(h, h.Index).ServeHTTP(rec, req)
+	body = rec.Body.String()
+	if !strings.Contains(body, "limit=50") {
+		t.Fatal("limit=50 should be reflected in controls and pagination")
+	}
+
+	// Negative page clamps to 1
+	req = httptest.NewRequest("GET", "/?page=-5", nil)
+	rec = httptest.NewRecorder()
+	withSession(h, h.Index).ServeHTTP(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("index with page=-5: expected 200, got %d", rec.Code)
+	}
+
+	// Invalid limit defaults to 20
+	req = httptest.NewRequest("GET", "/?limit=abc", nil)
+	rec = httptest.NewRecorder()
+	withSession(h, h.Index).ServeHTTP(rec, req)
+	body = rec.Body.String()
+	if strings.Contains(body, "limit=abc") {
+		t.Fatal("invalid limit should not appear in page")
+	}
+}
+
+func TestExportAPI_SortParam(t *testing.T) {
+	h := setupTestHandler(t)
+
+	now := time.Now()
+	h.Store.CreateArticle(testArticle("es-1", "Sort Export 1", "url", now.Add(-2*time.Hour)))
+	h.Store.CreateArticle(testArticle("es-2", "Sort Export 2", "url", now.Add(-1*time.Hour)))
+
+	// ASC sort
+	req := httptest.NewRequest("GET", "/api/v1/export?limit=1&offset=0&sort=asc", nil)
+	rec := httptest.NewRecorder()
+	h.APIExport(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("export asc: expected 200, got %d: %s", rec.Code, rec.Body.String())
+	}
+
+	var resp model.ExportResponse
+	json.Unmarshal(rec.Body.Bytes(), &resp)
+	if len(resp.Results) != 1 {
+		t.Fatalf("expected 1 result, got %d", len(resp.Results))
+	}
+	if resp.Results[0].Title != "Sort Export 1" {
+		t.Fatalf("asc sort: first should be Sort Export 1 (oldest), got %s", resp.Results[0].Title)
+	}
+	// Next URL should preserve sort=asc
+	if resp.Next != "" && !strings.Contains(resp.Next, "sort=asc") {
+		t.Fatalf("next URL should preserve sort=asc, got %s", resp.Next)
+	}
+
+	// DESC sort is default
+	req = httptest.NewRequest("GET", "/api/v1/export?limit=1&offset=0", nil)
+	rec = httptest.NewRecorder()
+	h.APIExport(rec, req)
+	json.Unmarshal(rec.Body.Bytes(), &resp)
+	if len(resp.Results) == 1 && resp.Results[0].Title != "Sort Export 2" {
+		t.Fatalf("desc sort (default): first should be Sort Export 2 (newest), got %s", resp.Results[0].Title)
+	}
+	// Default sort should NOT include sort=asc in next URL
+	if resp.Next != "" && strings.Contains(resp.Next, "sort=asc") {
+		t.Fatal("next URL without explicit sort should not include sort=asc")
+	}
+}
+
+func TestExportAPI_SortWithoutCount(t *testing.T) {
+	h := setupTestHandler(t)
+
+	now := time.Now()
+	for i := 0; i < 3; i++ {
+		h.Store.CreateArticle(testArticle(fmt.Sprintf("swc-%d", i), fmt.Sprintf("NoCount %d", i), "url", now.Add(time.Duration(i-2)*time.Hour)))
+	}
+
+	// ASC sort without count
+	req := httptest.NewRequest("GET", "/api/v1/export?limit=2&content=false&count=false&sort=asc", nil)
+	rec := httptest.NewRecorder()
+	h.APIExport(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("export asc no-count: expected 200, got %d", rec.Code)
+	}
+
+	var resp model.ExportResponse
+	json.Unmarshal(rec.Body.Bytes(), &resp)
+	if len(resp.Results) != 2 {
+		t.Fatalf("expected 2 results, got %d", len(resp.Results))
+	}
+	// Oldest first: NoCount 0 (idx -2h) should be first
+	if resp.Results[0].Title != "NoCount 0" {
+		t.Fatalf("asc no-count: first should be NoCount 0, got %s", resp.Results[0].Title)
+	}
+	if resp.Next != "" && !strings.Contains(resp.Next, "sort=asc") {
+		t.Fatalf("no-count next URL should preserve sort=asc, got %s", resp.Next)
 	}
 }
 

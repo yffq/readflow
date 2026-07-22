@@ -240,9 +240,16 @@ body {
 /* Inbox */
 .inbox-header {
     display: flex;
+    flex-wrap: wrap;
     align-items: baseline;
     gap: 12px;
     margin-bottom: 20px;
+}
+
+.inbox-header-left {
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
 }
 
 .inbox-header h1 {
@@ -252,6 +259,43 @@ body {
 .count {
     color: var(--text-secondary);
     font-size: 0.9rem;
+}
+
+.inbox-controls {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-left: auto;
+}
+
+.sort-control, .limit-control {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    overflow: hidden;
+}
+
+.sort-btn, .limit-btn {
+    padding: 4px 10px;
+    font-size: 0.78rem;
+    color: var(--text-secondary);
+    text-decoration: none;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s;
+}
+
+.sort-btn.active, .limit-btn.active {
+    background: var(--primary);
+    color: #fff;
+}
+
+.sort-btn:hover:not(.active), .limit-btn:hover:not(.active) {
+    background: var(--bg-secondary);
+    color: var(--text);
 }
 
 .article-list {
@@ -412,6 +456,14 @@ body {
 .reading-actions {
     display: flex;
     gap: 4px;
+}
+
+.reading-footer {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 32px;
+    padding-top: 16px;
+    border-top: 1px solid var(--border);
 }
 
 .article-body h1.article-title {

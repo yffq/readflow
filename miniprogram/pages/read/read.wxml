@@ -13,8 +13,13 @@
         <text wx:if="{{article.author}}">by {{article.author}}</text>
         <text wx:if="{{article.word_count}}">{{article.word_count}} words</text>
       </view>
-      <view wx:if="{{article.url}}" class="original-link" bindtap="copyOriginalUrl">
-        <text class="original-label">Copy original link</text>
+      <view class="header-actions">
+        <view wx:if="{{article.url}}" class="original-link" bindtap="copyOriginalUrl">
+          <text class="original-label">Copy original link</text>
+        </view>
+        <view class="delete-link" bindtap="confirmDelete">
+          <text class="delete-label">Delete</text>
+        </view>
       </view>
     </view>
 
@@ -65,5 +70,11 @@
       </block>
     </view>
     <view wx:else class="state">No content.</view>
+
+    <view class="bottom-actions">
+      <view class="delete-link bottom-delete" bindtap="confirmDelete">
+        <text class="delete-label">Delete</text>
+      </view>
+    </view>
   </view>
 </view>

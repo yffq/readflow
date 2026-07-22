@@ -41,7 +41,7 @@ func (s *Store) GetArticle(id string) (*model.Article, error) {
 	return a, nil
 }
 
-func (s *Store) ListArticles(status string, limit, offset int) ([]model.Article, int, error) {
+func (s *Store) ListArticles(status string, limit, offset int, asc bool) ([]model.Article, int, error) {
 	var count int
 	countSQL := "SELECT COUNT(*) FROM articles"
 	querySQL := `SELECT id, title, url, content_html, content_md, author, site_name, word_count, source, extraction_failed, status, created_at, updated_at FROM articles`
@@ -52,7 +52,11 @@ func (s *Store) ListArticles(status string, limit, offset int) ([]model.Article,
 		querySQL += " WHERE status = ?"
 		args = append(args, status)
 	}
-	querySQL += " ORDER BY created_at DESC LIMIT ? OFFSET ?"
+	order := "DESC"
+	if asc {
+		order = "ASC"
+	}
+	querySQL += " ORDER BY created_at " + order + " LIMIT ? OFFSET ?"
 
 	if err := s.db.QueryRow(countSQL, args...).Scan(&count); err != nil {
 		return nil, 0, err

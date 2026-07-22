@@ -2,8 +2,10 @@
   var menu = document.getElementById('link-menu');
   var toast = document.getElementById('toast');
   var apiKeyMeta = document.querySelector('meta[name="api-key"]');
+  var articleIdMeta = document.querySelector('meta[name="article-id"]');
   var menuUrl = '';
   var apiKey = apiKeyMeta ? apiKeyMeta.getAttribute('content') : '';
+  var articleId = articleIdMeta ? articleIdMeta.getAttribute('content') : '';
   if (apiKey && apiKey.toLowerCase().indexOf('bearer ') === 0) {
     apiKey = apiKey.slice(7).trim();
   }
@@ -233,4 +235,33 @@
   document.addEventListener('click', function (e) {
     if (menu && !menu.contains(e.target)) hideMenu();
   });
+
+  function deleteArticle() {
+    if (!articleId) {
+      showToast('No article to delete');
+      return;
+    }
+    if (!confirm('Delete this article?')) return;
+    if (!apiKey) {
+      showToast('No API key configured');
+      return;
+    }
+    showToast('Deleting...');
+    postJSON(location.origin + '/api/v1/delete', { ids: [articleId] }, {
+      'Accept': 'application/json',
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer ' + apiKey
+    }).then(function (res) {
+      if (!res.ok) throw new Error((res.data && res.data.error) || ('Failed to delete: ' + res.status));
+      showToast('Deleted');
+      setTimeout(function () { history.back(); }, 800);
+    }).catch(function (err) {
+      showToast(err.message || 'Failed to delete.');
+    });
+  }
+
+  var deleteBtnTop = document.getElementById('delete-btn-top');
+  var deleteBtnBottom = document.getElementById('delete-btn-bottom');
+  if (deleteBtnTop) deleteBtnTop.addEventListener('click', deleteArticle);
+  if (deleteBtnBottom) deleteBtnBottom.addEventListener('click', deleteArticle);
 })();

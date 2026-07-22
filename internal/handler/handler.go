@@ -124,14 +124,36 @@ func (h *Handler) Logout(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) Index(w http.ResponseWriter, r *http.Request) {
 	page := intValue(r.URL.Query().Get("page"), 1)
-	limit := 20
+	if page < 1 {
+		page = 1
+	}
+	limit := intValue(r.URL.Query().Get("limit"), 20)
+	if limit != 20 && limit != 50 && limit != 100 {
+		limit = 20
+	}
+	sortAsc := r.URL.Query().Get("sort") == "asc"
 	offset := (page - 1) * limit
-	articles, total, _ := h.Store.ListArticles("unread", limit, offset)
+	articles, total, err := h.Store.ListArticles("unread", limit, offset, sortAsc)
+	if err != nil {
+		http.Error(w, "failed to list articles", http.StatusInternalServerError)
+		return
+	}
+
+	querySuffix := ""
+	if sortAsc {
+		querySuffix += "&sort=asc"
+	}
+	if limit != 20 {
+		querySuffix += fmt.Sprintf("&limit=%d", limit)
+	}
+
 	h.render(w, r, "page_index", map[string]any{
-		"Articles": articles,
-		"Total":    total,
-		"Page":     page,
-		"Limit":    limit,
+		"Articles":    articles,
+		"Total":       total,
+		"Page":        page,
+		"Limit":       limit,
+		"SortAsc":     sortAsc,
+		"QuerySuffix": querySuffix,
 	})
 }
 
@@ -185,16 +207,29 @@ func (h *Handler) SavePage(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) SaveForm(w http.ResponseWriter, r *http.Request) {
 	r.ParseForm()
+	if !h.validateFormCSRF(w, r) {
+		return
+	}
 	urlStr := r.FormValue("url")
 	htmlStr := r.FormValue("article_html")
 	title := r.FormValue("title")
 
 	if htmlStr != "" {
+		if strings.TrimSpace(urlStr) != "" {
+			if err := extract.ValidatePublicURL(strings.TrimSpace(urlStr)); err != nil {
+				h.render(w, r, "page_save", map[string]any{"Error": err.Error()})
+				return
+			}
+		}
 		h.saveHTML(w, r, &model.SaveRequest{HTML: htmlStr, Title: title, URL: urlStr})
 		http.Redirect(w, r, "/", http.StatusSeeOther)
 		return
 	}
 	if urlStr != "" {
+		if err := extract.ValidatePublicURL(strings.TrimSpace(urlStr)); err != nil {
+			h.render(w, r, "page_save", map[string]any{"Error": err.Error()})
+			return
+		}
 		h.saveURL(w, r, &model.SaveRequest{URL: urlStr})
 		http.Redirect(w, r, "/", http.StatusSeeOther)
 		return
@@ -236,6 +271,9 @@ func (h *Handler) SettingsPage(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) GenerateAPIKey(w http.ResponseWriter, r *http.Request) {
+	if !h.validateFormCSRF(w, r) {
+		return
+	}
 	userID := h.getSessionString(r.Context(), "user_id")
 	name := r.FormValue("name")
 	if name == "" {
@@ -252,6 +290,9 @@ func (h *Handler) GenerateAPIKey(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) DeleteAPIKey(w http.ResponseWriter, r *http.Request) {
+	if !h.validateFormCSRF(w, r) {
+		return
+	}
 	userID := h.getSessionString(r.Context(), "user_id")
 	keyID := r.PathValue("id")
 	h.Store.DeleteAPIKey(userID, keyID)
@@ -276,6 +317,11 @@ func (h *Handler) APISave(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) saveURL(w http.ResponseWriter, r *http.Request, req *model.SaveRequest) {
+	req.URL = strings.TrimSpace(req.URL)
+	if err := extract.ValidatePublicURL(req.URL); err != nil {
+		h.jsonError(w, http.StatusBadRequest, err.Error())
+		return
+	}
 	if id, dup := h.Store.CheckArticleByURL(req.URL); dup {
 		h.jsonResponse(w, http.StatusOK, fmt.Sprintf(`{"id":"%s","status":"duplicate"}`, id))
 		return
@@ -312,6 +358,13 @@ func (h *Handler) saveURL(w http.ResponseWriter, r *http.Request, req *model.Sav
 }
 
 func (h *Handler) saveHTML(w http.ResponseWriter, r *http.Request, req *model.SaveRequest) {
+	req.URL = strings.TrimSpace(req.URL)
+	if req.URL != "" {
+		if err := extract.ValidatePublicURL(req.URL); err != nil {
+			h.jsonError(w, http.StatusBadRequest, err.Error())
+			return
+		}
+	}
 	cleaned := sanitize.Sanitize(req.HTML)
 	title := req.Title
 	if title == "" {
@@ -351,6 +404,7 @@ func (h *Handler) APIExport(w http.ResponseWriter, r *http.Request) {
 	}
 	limit := intValue(r.URL.Query().Get("limit"), 100)
 	offset := intValue(r.URL.Query().Get("offset"), 0)
+	sortAsc := r.URL.Query().Get("sort") == "asc"
 	if limit <= 0 {
 		limit = 100
 	}
@@ -364,7 +418,7 @@ func (h *Handler) APIExport(w http.ResponseWriter, r *http.Request) {
 	var err error
 
 	if !includeContent && !includeCount {
-		articles, err = h.Store.ListArticleSummaryPageSince(updatedAfter, limit+1, offset)
+		articles, err = h.Store.ListArticleSummaryPageSince(updatedAfter, limit+1, offset, sortAsc)
 		if err != nil {
 			h.jsonError(w, http.StatusInternalServerError, "failed to query articles")
 			return
@@ -383,6 +437,9 @@ func (h *Handler) APIExport(w http.ResponseWriter, r *http.Request) {
 			params.Set("count", "false")
 			params.Set("limit", fmt.Sprint(limit))
 			params.Set("offset", fmt.Sprint(offset+limit))
+			if sortAsc {
+				params.Set("sort", "asc")
+			}
 			next = "/api/v1/export?" + params.Encode()
 		}
 		resp := model.ExportResponse{Count: offset + len(articles), Next: next, HasMore: hasMore, Results: articles}
@@ -391,9 +448,9 @@ func (h *Handler) APIExport(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if includeContent {
-		articles, total, err = h.Store.ListArticlesSince(updatedAfter, limit, offset)
+		articles, total, err = h.Store.ListArticlesSince(updatedAfter, limit, offset, sortAsc)
 	} else {
-		articles, total, err = h.Store.ListArticleSummariesSince(updatedAfter, limit, offset)
+		articles, total, err = h.Store.ListArticleSummariesSince(updatedAfter, limit, offset, sortAsc)
 	}
 	if err != nil {
 		h.jsonError(w, http.StatusInternalServerError, "failed to query articles")
@@ -413,6 +470,9 @@ func (h *Handler) APIExport(w http.ResponseWriter, r *http.Request) {
 		}
 		params.Set("limit", fmt.Sprint(limit))
 		params.Set("offset", fmt.Sprint(offset+limit))
+		if sortAsc {
+			params.Set("sort", "asc")
+		}
 		next = "/api/v1/export?" + params.Encode()
 	}
 	resp := model.ExportResponse{Count: total, Next: next, HasMore: next != "", Results: articles}
@@ -453,6 +513,9 @@ func (h *Handler) APIReadArticle(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) DeleteArticle(w http.ResponseWriter, r *http.Request) {
+	if !h.validateFormCSRF(w, r) {
+		return
+	}
 	id := r.PathValue("id")
 	h.Store.DeleteArticle(id)
 	http.Redirect(w, r, "/", http.StatusSeeOther)
@@ -536,6 +599,15 @@ func (h *Handler) jsonResponse(w http.ResponseWriter, status int, body string) {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.WriteHeader(status)
 	w.Write([]byte(body))
+}
+
+func (h *Handler) validateFormCSRF(w http.ResponseWriter, r *http.Request) bool {
+	sessionToken := h.getSessionString(r.Context(), "csrf_token")
+	if sessionToken == "" || r.FormValue("csrf_token") != sessionToken {
+		http.Error(w, "invalid csrf token", http.StatusForbidden)
+		return false
+	}
+	return true
 }
 
 func newID() string {

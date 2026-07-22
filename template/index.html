@@ -1,8 +1,21 @@
 {{define "page_index"}}{{template "header" .}}
 <div class="inbox">
     <div class="inbox-header">
-        <h1>Inbox</h1>
-        <span class="count">{{.Total}} articles</span>
+        <div class="inbox-header-left">
+            <h1>Inbox</h1>
+            <span class="count">{{.Total}} articles</span>
+        </div>
+        <div class="inbox-controls">
+            <div class="sort-control">
+                <a href="/?sort=desc{{if ne .Limit 20}}&limit={{.Limit}}{{end}}" class="sort-btn{{if not .SortAsc}} active{{end}}">Newest</a>
+                <a href="/?sort=asc{{if ne .Limit 20}}&limit={{.Limit}}{{end}}" class="sort-btn{{if .SortAsc}} active{{end}}">Oldest</a>
+            </div>
+            <div class="limit-control">
+                <a href="/?limit=20{{if .SortAsc}}&sort=asc{{end}}" class="limit-btn{{if eq .Limit 20}} active{{end}}">20</a>
+                <a href="/?limit=50{{if .SortAsc}}&sort=asc{{end}}" class="limit-btn{{if eq .Limit 50}} active{{end}}">50</a>
+                <a href="/?limit=100{{if .SortAsc}}&sort=asc{{end}}" class="limit-btn{{if eq .Limit 100}} active{{end}}">100</a>
+            </div>
+        </div>
     </div>
 
     {{if .Articles}}
@@ -45,10 +58,10 @@
     {{if gt .Total .Limit}}
     <div class="pagination">
         {{if gt .Page 1}}
-        <a href="/?page={{subtract .Page 1}}" class="btn-sm">&larr; Previous</a>
+        <a href="/?page={{subtract .Page 1}}{{.QuerySuffix}}" class="btn-sm">&larr; Previous</a>
         {{end}}
         {{if gt .Total (multiply .Page .Limit)}}
-        <a href="/?page={{add .Page 1}}" class="btn-sm">Next &rarr;</a>
+        <a href="/?page={{add .Page 1}}{{.QuerySuffix}}" class="btn-sm">Next &rarr;</a>
         {{end}}
     </div>
     {{end}}

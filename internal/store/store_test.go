@@ -128,7 +128,7 @@ func TestStore_CRUD(t *testing.T) {
 			t.Fatalf("expected 'Test Article', got '%s'", got.Title)
 		}
 
-		articles, total, err := s.ListArticles("unread", 10, 0)
+		articles, total, err := s.ListArticles("unread", 10, 0, false)
 		if err != nil {
 			t.Fatalf("ListArticles: %v", err)
 		}
@@ -146,12 +146,12 @@ func TestStore_CRUD(t *testing.T) {
 			t.Fatal("expected archived status")
 		}
 
-		articles, total, _ = s.ListArticles("unread", 10, 0)
+		articles, total, _ = s.ListArticles("unread", 10, 0, false)
 		if total != 0 {
 			t.Fatal("expected 0 unread after archive")
 		}
 
-		exports, count, err := s.ListArticlesSince(time.Time{}, 10, 0)
+		exports, count, err := s.ListArticlesSince(time.Time{}, 10, 0, false)
 		if err != nil || count != 1 {
 			t.Fatalf("ListArticlesSince: err=%v count=%d", err, count)
 		}
@@ -167,6 +167,44 @@ func TestStore_CRUD(t *testing.T) {
 		got, _ = s.GetArticle("test-article-1")
 		if got != nil {
 			t.Fatal("expected nil after delete")
+		}
+	})
+
+	t.Run("SortOrder", func(t *testing.T) {
+		now := time.Now()
+		articles := []*model.Article{
+			{ID: "sort-1", Title: "First", URL: "https://x.com/1", ContentHTML: "<p>1</p>", ContentMD: "1", Source: "url", Status: "unread", CreatedAt: now.Add(-3 * time.Hour), UpdatedAt: now.Add(-3 * time.Hour)},
+			{ID: "sort-2", Title: "Second", URL: "https://x.com/2", ContentHTML: "<p>2</p>", ContentMD: "2", Source: "url", Status: "unread", CreatedAt: now.Add(-2 * time.Hour), UpdatedAt: now.Add(-2 * time.Hour)},
+			{ID: "sort-3", Title: "Third", URL: "https://x.com/3", ContentHTML: "<p>3</p>", ContentMD: "3", Source: "url", Status: "unread", CreatedAt: now.Add(-1 * time.Hour), UpdatedAt: now.Add(-1 * time.Hour)},
+		}
+		for _, a := range articles {
+			if err := s.CreateArticle(a); err != nil {
+				t.Fatalf("CreateArticle: %v", err)
+			}
+		}
+
+		// DESC (newest first) — order should be Third, Second, First
+		desc, _, err := s.ListArticles("unread", 10, 0, false)
+		if err != nil {
+			t.Fatalf("ListArticles desc: %v", err)
+		}
+		if len(desc) != 3 {
+			t.Fatalf("expected 3 articles, got %d", len(desc))
+		}
+		if desc[0].Title != "Third" || desc[2].Title != "First" {
+			t.Fatalf("desc order wrong: got %s,%s,%s", desc[0].Title, desc[1].Title, desc[2].Title)
+		}
+
+		// ASC (oldest first) — order should be First, Second, Third
+		asc, _, err := s.ListArticles("unread", 10, 0, true)
+		if err != nil {
+			t.Fatalf("ListArticles asc: %v", err)
+		}
+		if len(asc) != 3 {
+			t.Fatalf("expected 3 articles, got %d", len(asc))
+		}
+		if asc[0].Title != "First" || asc[2].Title != "Third" {
+			t.Fatalf("asc order wrong: got %s,%s,%s", asc[0].Title, asc[1].Title, asc[2].Title)
 		}
 	})
 }

@@ -29,12 +29,16 @@ function request(path, options = {}) {
   })
 }
 
-function fetchArticles(limit = 20, offset = 0) {
-  return request(`/api/v1/export?limit=${limit}&offset=${offset}&content=false&count=false`)
+function fetchArticles(limit = 20, offset = 0, asc = false) {
+  var params = 'limit=' + limit + '&offset=' + offset + '&content=false&count=false';
+  if (asc) params += '&sort=asc';
+  return request('/api/v1/export?' + params)
 }
 
-function fetchArticleSummaries(limit = 20, offset = 0) {
-  return request(`/api/v1/export?limit=${limit}&offset=${offset}&content=false`)
+function fetchArticleSummaries(limit = 20, offset = 0, asc = false) {
+  var params = 'limit=' + limit + '&offset=' + offset + '&content=false';
+  if (asc) params += '&sort=asc';
+  return request('/api/v1/export?' + params)
 }
 
 function fetchArticle(id) {

@@ -7,6 +7,7 @@ Page({
     total: 0,
     page: 1,
     limit: 20,
+    sortAsc: false,
     loading: true,
     refreshing: false,
     hasMore: false,
@@ -61,8 +62,8 @@ Page({
   },
 
   fetchArticlePage(limit, offset) {
-    return api.fetchArticles(limit, offset).catch(err => {
-      return api.fetchArticleSummaries(limit, offset).catch(() => {
+    return api.fetchArticles(limit, offset, this.data.sortAsc).catch(err => {
+      return api.fetchArticleSummaries(limit, offset, this.data.sortAsc).catch(() => {
         throw err
       })
     })
@@ -121,5 +122,17 @@ Page({
 
   openSettings() {
     wx.navigateTo({ url: '/pages/settings/settings' })
+  },
+
+  setSort(e) {
+    const asc = e.currentTarget.dataset.asc
+    if (asc === this.data.sortAsc) return
+    this.setData({ sortAsc: asc, page: 1 }, () => this.loadArticles())
+  },
+
+  setLimit(e) {
+    const limit = Number(e.currentTarget.dataset.limit)
+    if (limit === this.data.limit) return
+    this.setData({ limit, page: 1 }, () => this.loadArticles())
   }
 })
