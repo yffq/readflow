@@ -43,10 +43,12 @@
     </article>
 
     <div class="reading-footer">
-        <form method="POST" action="/delete/{{.Article.ID}}" class="inline" onsubmit="return confirm('Delete this article?')">
-            <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
-            <button class="btn-sm btn-danger">Delete</button>
-        </form>
+        <div class="reading-actions">
+            <form method="POST" action="/delete/{{.Article.ID}}" class="inline" onsubmit="return confirm('Delete this article?')">
+                <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+                <button class="btn-sm btn-danger">Delete</button>
+            </form>
+        </div>
     </div>
 </div>
 
