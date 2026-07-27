@@ -21,6 +21,7 @@ func intValue(s string, def int) int {
 }
 
 func decodeJSON(r *http.Request, v interface{}) error {
+	r.Body = http.MaxBytesReader(nil, r.Body, 5*1024*1024)
 	defer r.Body.Close()
 	return json.NewDecoder(r.Body).Decode(v)
 }

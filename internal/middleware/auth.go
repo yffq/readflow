@@ -2,8 +2,6 @@ package middleware
 
 import (
 	"context"
-	"crypto/sha256"
-	"encoding/hex"
 	"net/http"
 	"os"
 	"strings"
@@ -56,10 +54,7 @@ func APIKeyAuth(s *store.Store) func(http.Handler) http.Handler {
 				return
 			}
 
-			hash := sha256.Sum256([]byte(key))
-			keyHash := hex.EncodeToString(hash[:])
-
-			if err := s.ValidateAPIKey(keyHash); err != nil {
+			if err := s.ValidateAPIKey(key); err != nil {
 				w.Header().Set("Content-Type", "application/json")
 				w.WriteHeader(http.StatusUnauthorized)
 				w.Write([]byte(`{"error":"invalid api key"}`))

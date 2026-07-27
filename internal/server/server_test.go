@@ -6,6 +6,7 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
@@ -29,22 +30,27 @@ func TestServerIntegration(t *testing.T) {
 	ts := httptest.NewServer(srv.http.Handler)
 	defer ts.Close()
 
-	client := &http.Client{
-		CheckRedirect: func(req *http.Request, via []*http.Request) error {
-			return http.ErrUseLastResponse
-		},
+	newClient := func() *http.Client {
+		return &http.Client{
+			Jar: newCookieJar(),
+			CheckRedirect: func(req *http.Request, via []*http.Request) error {
+				return http.ErrUseLastResponse
+			},
+		}
 	}
 
 	t.Run("Setup", func(t *testing.T) {
+		client := newClient()
 		resp := doRequest(t, client, ts.URL+"/setup", "GET", nil, nil)
 		if resp.StatusCode != http.StatusOK {
 			t.Fatalf("setup page: expected 200, got %d", resp.StatusCode)
 		}
+		csrf := extractCSRF(resp)
 
-		form := strings.NewReader("password=testpass123")
+		form := url.Values{"password": {"testpass123"}, "csrf_token": {csrf}}
 		resp = doRequest(t, client, ts.URL+"/setup", "POST", map[string]string{
 			"Content-Type": "application/x-www-form-urlencoded",
-		}, form)
+		}, strings.NewReader(form.Encode()))
 		if resp.StatusCode != http.StatusSeeOther {
 			t.Fatalf("setup: expected 303, got %d", resp.StatusCode)
 		}
@@ -55,15 +61,17 @@ func TestServerIntegration(t *testing.T) {
 	})
 
 	t.Run("Login", func(t *testing.T) {
+		client := newClient()
 		resp := doRequest(t, client, ts.URL+"/login", "GET", nil, nil)
 		if resp.StatusCode != http.StatusOK {
 			t.Fatalf("login page: expected 200, got %d", resp.StatusCode)
 		}
+		csrf := extractCSRF(resp)
 
-		form := strings.NewReader("password=wrong")
+		form := url.Values{"password": {"wrong"}, "csrf_token": {csrf}}
 		resp = doRequest(t, client, ts.URL+"/login", "POST", map[string]string{
 			"Content-Type": "application/x-www-form-urlencoded",
-		}, form)
+		}, strings.NewReader(form.Encode()))
 		if resp.StatusCode != http.StatusSeeOther {
 			t.Fatalf("bad login: expected 303, got %d", resp.StatusCode)
 		}
@@ -74,10 +82,17 @@ func TestServerIntegration(t *testing.T) {
 	})
 
 	t.Run("LoginSuccess_RedirectToIndex", func(t *testing.T) {
-		form := strings.NewReader("password=testpass123")
-		resp := doRequest(t, client, ts.URL+"/login", "POST", map[string]string{
+		client := newClient()
+		resp := doRequest(t, client, ts.URL+"/login", "GET", nil, nil)
+		if resp.StatusCode != http.StatusOK {
+			t.Fatalf("login page: expected 200, got %d", resp.StatusCode)
+		}
+		csrf := extractCSRF(resp)
+
+		form := url.Values{"password": {"testpass123"}, "csrf_token": {csrf}}
+		resp = doRequest(t, client, ts.URL+"/login", "POST", map[string]string{
 			"Content-Type": "application/x-www-form-urlencoded",
-		}, form)
+		}, strings.NewReader(form.Encode()))
 		if resp.StatusCode != http.StatusSeeOther {
 			t.Fatalf("login: expected 303, got %d", resp.StatusCode)
 		}
@@ -88,6 +103,7 @@ func TestServerIntegration(t *testing.T) {
 	})
 
 	t.Run("SaveAPI_NoAuth", func(t *testing.T) {
+		client := newClient()
 		body := model.SaveRequest{
 			HTML:  "<p>Hello</p>",
 			Title: "Test",
@@ -102,6 +118,7 @@ func TestServerIntegration(t *testing.T) {
 	})
 
 	t.Run("ExportAPI_NoAuth", func(t *testing.T) {
+		client := newClient()
 		resp := doRequest(t, client, ts.URL+"/api/v1/export", "GET", nil, nil)
 		if resp.StatusCode != http.StatusUnauthorized {
 			t.Fatalf("expected 401 without auth, got %d", resp.StatusCode)
@@ -123,4 +140,36 @@ func doRequest(t *testing.T, client *http.Client, url, method string, headers ma
 		t.Fatalf("do request: %v", err)
 	}
 	return resp
+}
+
+func extractCSRF(resp *http.Response) string {
+	body, _ := io.ReadAll(resp.Body)
+	resp.Body = io.NopCloser(bytes.NewReader(body))
+	html := string(body)
+	idx := strings.Index(html, `name="csrf_token" value="`)
+	if idx == -1 {
+		return ""
+	}
+	start := idx + len(`name="csrf_token" value="`)
+	end := strings.Index(html[start:], `"`)
+	if end == -1 {
+		return ""
+	}
+	return html[start : start+end]
+}
+
+func newCookieJar() http.CookieJar {
+	return &testCookieJar{jar: make(map[string][]*http.Cookie)}
+}
+
+type testCookieJar struct {
+	jar map[string][]*http.Cookie
+}
+
+func (j *testCookieJar) SetCookies(u *url.URL, cookies []*http.Cookie) {
+	j.jar[u.Host] = cookies
+}
+
+func (j *testCookieJar) Cookies(u *url.URL) []*http.Cookie {
+	return j.jar[u.Host]
 }

@@ -13,7 +13,7 @@ func main() {
 		dbPath = "data/readflow.db"
 	}
 
-	if err := os.MkdirAll("data", 0755); err != nil {
+	if err := os.MkdirAll("data", 0700); err != nil {
 		log.Fatalf("failed to create data directory: %v", err)
 	}
 

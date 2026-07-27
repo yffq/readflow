@@ -1,10 +1,13 @@
 package store
 
 import (
+	"crypto/rand"
+	"encoding/hex"
 	"testing"
 	"time"
 
 	"github.com/readflow/readflow/internal/model"
+	"golang.org/x/crypto/bcrypt"
 )
 
 func TestStore_CRUD(t *testing.T) {
@@ -54,7 +57,8 @@ func TestStore_CRUD(t *testing.T) {
 	})
 
 	t.Run("APIKeys", func(t *testing.T) {
-		err := s.CreateAPIKey("default", "rf_abc123", "hash_abc", "TestKey")
+		_, rawKey, keyHash := generateTestAPIKey()
+		err := s.CreateAPIKey("default", rawKey[:11], keyHash, "TestKey")
 		if err != nil {
 			t.Fatalf("CreateAPIKey: %v", err)
 		}
@@ -67,12 +71,12 @@ func TestStore_CRUD(t *testing.T) {
 			t.Fatalf("expected 1 key, got %d", len(keys))
 		}
 
-		err = s.ValidateAPIKey("hash_abc")
+		err = s.ValidateAPIKey(rawKey)
 		if err != nil {
 			t.Fatalf("ValidateAPIKey: %v", err)
 		}
 
-		err = s.ValidateAPIKey("bad_hash")
+		err = s.ValidateAPIKey("rf_bad_key_1234567890")
 		if err == nil {
 			t.Fatal("expected error for invalid key")
 		}
@@ -207,4 +211,14 @@ func TestStore_CRUD(t *testing.T) {
 			t.Fatalf("asc order wrong: got %s,%s,%s", asc[0].Title, asc[1].Title, asc[2].Title)
 		}
 	})
+}
+
+func generateTestAPIKey() (prefix string, rawKey string, keyHash string) {
+	b := make([]byte, 32)
+	rand.Read(b)
+	rawKey = "rf_" + hex.EncodeToString(b)
+	prefix = rawKey[:11]
+	hash, _ := bcrypt.GenerateFromPassword([]byte(rawKey), bcrypt.DefaultCost)
+	keyHash = string(hash)
+	return
 }

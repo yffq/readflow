@@ -115,23 +115,24 @@ func TestSetupFlow(t *testing.T) {
 	if rec.Code != http.StatusOK {
 		t.Fatalf("setup page: expected 200, got %d", rec.Code)
 	}
+	csrfToken := extractCSRFToken(rec.Body.String())
 
 	// POST /setup with short password
-	form := url.Values{"password": {"ab"}}
+	form := url.Values{"password": {"ab"}, "csrf_token": {csrfToken}}
 	req = httptest.NewRequest("POST", "/setup", strings.NewReader(form.Encode()))
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	rec = httptest.NewRecorder()
-	withSession(h, h.Setup).ServeHTTP(rec, req)
+	withCSRFSession(h, csrfToken, h.Setup).ServeHTTP(rec, req)
 	if rec.Code != http.StatusSeeOther {
 		t.Fatalf("setup with short pass: expected 303, got %d", rec.Code)
 	}
 
 	// POST /setup with valid password
-	form = url.Values{"password": {"testpass123"}}
+	form = url.Values{"password": {"testpass123"}, "csrf_token": {csrfToken}}
 	req = httptest.NewRequest("POST", "/setup", strings.NewReader(form.Encode()))
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	rec = httptest.NewRecorder()
-	withSession(h, h.Setup).ServeHTTP(rec, req)
+	withCSRFSession(h, csrfToken, h.Setup).ServeHTTP(rec, req)
 	if rec.Code != http.StatusSeeOther {
 		t.Fatalf("setup: expected 303, got %d", rec.Code)
 	}
@@ -153,13 +154,14 @@ func TestLoginFlow(t *testing.T) {
 	if rec.Code != http.StatusOK {
 		t.Fatalf("login page: expected 200, got %d", rec.Code)
 	}
+	csrfToken := extractCSRFToken(rec.Body.String())
 
 	// POST invalid password
-	form := url.Values{"password": {"wrong"}}
+	form := url.Values{"password": {"wrong"}, "csrf_token": {csrfToken}}
 	req = httptest.NewRequest("POST", "/login", strings.NewReader(form.Encode()))
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	rec = httptest.NewRecorder()
-	withSession(h, h.Login).ServeHTTP(rec, req)
+	withCSRFSession(h, csrfToken, h.Login).ServeHTTP(rec, req)
 	if rec.Code != http.StatusSeeOther {
 		t.Fatalf("bad login: expected 303, got %d", rec.Code)
 	}
@@ -169,11 +171,11 @@ func TestLoginFlow(t *testing.T) {
 	}
 
 	// POST valid password
-	form = url.Values{"password": {"testpass123"}}
+	form = url.Values{"password": {"testpass123"}, "csrf_token": {csrfToken}}
 	req = httptest.NewRequest("POST", "/login", strings.NewReader(form.Encode()))
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	rec = httptest.NewRecorder()
-	withSession(h, h.Login).ServeHTTP(rec, req)
+	withCSRFSession(h, csrfToken, h.Login).ServeHTTP(rec, req)
 	if rec.Code != http.StatusSeeOther {
 		t.Fatalf("login: expected 303, got %d", rec.Code)
 	}
@@ -845,4 +847,17 @@ func testArticle(id, title, source string, t time.Time) *model.Article {
 		CreatedAt:   t,
 		UpdatedAt:   t,
 	}
+}
+
+func extractCSRFToken(html string) string {
+	idx := strings.Index(html, `name="csrf_token" value="`)
+	if idx == -1 {
+		return ""
+	}
+	start := idx + len(`name="csrf_token" value="`)
+	end := strings.Index(html[start:], `"`)
+	if end == -1 {
+		return ""
+	}
+	return html[start : start+end]
 }

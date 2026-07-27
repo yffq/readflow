@@ -2,8 +2,9 @@ package middleware
 
 import (
 	"crypto/rand"
-	"crypto/sha256"
 	"encoding/hex"
+
+	"golang.org/x/crypto/bcrypt"
 )
 
 func GenerateAPIKey() (prefix string, rawKey string, keyHash string) {
@@ -11,7 +12,7 @@ func GenerateAPIKey() (prefix string, rawKey string, keyHash string) {
 	rand.Read(b)
 	rawKey = "rf_" + hex.EncodeToString(b)
 	prefix = rawKey[:11]
-	hash := sha256.Sum256([]byte(rawKey))
-	keyHash = hex.EncodeToString(hash[:])
+	hash, _ := bcrypt.GenerateFromPassword([]byte(rawKey), bcrypt.DefaultCost)
+	keyHash = string(hash)
 	return prefix, rawKey, keyHash
 }

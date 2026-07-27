@@ -85,16 +85,35 @@ func (s *Store) DeleteAPIKey(userID, keyID string) error {
 	return err
 }
 
-func (s *Store) ValidateAPIKey(keyHash string) error {
-	var count int
-	err := s.db.QueryRow("SELECT COUNT(*) FROM api_keys WHERE key_hash = ?", keyHash).Scan(&count)
+func (s *Store) ValidateAPIKey(key string) error {
+	prefix := ""
+	if len(key) >= 11 {
+		prefix = key[:11]
+	}
+	rows, err := s.db.Query("SELECT key_hash FROM api_keys WHERE key_prefix = ?", prefix)
 	if err != nil {
 		return err
 	}
-	if count == 0 {
+
+	var matchedHash string
+	for rows.Next() {
+		var keyHash string
+		if err := rows.Scan(&keyHash); err != nil {
+			continue
+		}
+		if bcrypt.CompareHashAndPassword([]byte(keyHash), []byte(key)) == nil {
+			matchedHash = keyHash
+			break
+		}
+	}
+	rows.Close()
+	if err := rows.Err(); err != nil {
+		return err
+	}
+	if matchedHash == "" {
 		return ErrInvalidAPIKey
 	}
-	s.db.Exec("UPDATE api_keys SET last_used = datetime('now') WHERE key_hash = ?", keyHash)
+	s.db.Exec("UPDATE api_keys SET last_used = datetime('now') WHERE key_hash = ?", matchedHash)
 	return nil
 }
 

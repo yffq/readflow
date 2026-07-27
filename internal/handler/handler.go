@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"html/template"
+	"log"
 	"net/http"
 	"net/url"
 	"strings"
@@ -38,7 +39,11 @@ func (h *Handler) getSessionString(ctx context.Context, key string) string {
 	if h.SM == nil {
 		return ""
 	}
-	defer func() { recover() }()
+	defer func() {
+		if r := recover(); r != nil {
+			log.Printf("session not loaded in context, returning empty for key=%s: %v", key, r)
+		}
+	}()
 	return h.SM.GetString(ctx, key)
 }
 
@@ -53,15 +58,22 @@ func (h *Handler) render(w http.ResponseWriter, r *http.Request, tmplName string
 		b := make([]byte, 32)
 		rand.Read(b)
 		token = hex.EncodeToString(b)
-		func() {
-			defer func() { recover() }()
-			h.SM.Put(r.Context(), "csrf_token", token)
-			h.SM.Commit(r.Context())
-		}()
+		if h.SM != nil {
+			func() {
+				defer func() {
+					if r := recover(); r != nil {
+						log.Printf("session not loaded in context, cannot store csrf_token: %v", r)
+					}
+				}()
+				h.SM.Put(r.Context(), "csrf_token", token)
+				h.SM.Commit(r.Context())
+			}()
+		}
 	}
 	data["CSRFToken"] = token
 	if err := h.Templates.ExecuteTemplate(w, tmplName, data); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		log.Printf("template render error: %v", err)
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 	}
 }
 
@@ -86,12 +98,16 @@ func (h *Handler) Setup(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, "/login", http.StatusSeeOther)
 		return
 	}
+	if !h.validateFormCSRF(w, r) {
+		return
+	}
 	password := r.FormValue("password")
-	if password == "" || len(password) < 4 {
-		http.Redirect(w, r, "/setup?error=Password+must+be+at+least+4+characters", http.StatusSeeOther)
+	if password == "" || len(password) < 8 {
+		http.Redirect(w, r, "/setup?error=Password+must+be+at+least+8+characters", http.StatusSeeOther)
 		return
 	}
 	if _, err := h.Store.CreateUser(password); err != nil {
+		log.Printf("failed to create user: %v", err)
 		http.Error(w, "failed to create user", http.StatusInternalServerError)
 		return
 	}
@@ -102,6 +118,9 @@ func (h *Handler) Setup(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
+	if !h.validateFormCSRF(w, r) {
+		return
+	}
 	password := r.FormValue("password")
 	if password == "" {
 		http.Redirect(w, r, "/login?error=Password+required", http.StatusSeeOther)
@@ -179,6 +198,8 @@ func (h *Handler) ReadPage(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) ReadMobilePage(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Cache-Control", "no-store")
+
 	apiKey := middleware.APIKeyFromRequest(r)
 
 	id := r.PathValue("id")
@@ -351,7 +372,8 @@ func (h *Handler) saveURL(w http.ResponseWriter, r *http.Request, req *model.Sav
 	article.CreatedAt = time.Now()
 	article.UpdatedAt = article.CreatedAt
 	if err := h.Store.CreateArticle(article); err != nil {
-		h.jsonError(w, http.StatusInternalServerError, "failed to save article: "+err.Error())
+		log.Printf("failed to save article: %v", err)
+		h.jsonError(w, http.StatusInternalServerError, "failed to save article")
 		return
 	}
 	h.jsonResponse(w, http.StatusOK, fmt.Sprintf(`{"id":"%s","title":"%s","status":"created"}`, article.ID, template.JSEscapeString(article.Title)))
@@ -386,7 +408,8 @@ func (h *Handler) saveHTML(w http.ResponseWriter, r *http.Request, req *model.Sa
 		UpdatedAt:   time.Now(),
 	}
 	if err := h.Store.CreateArticle(article); err != nil {
-		h.jsonError(w, http.StatusInternalServerError, "failed to save article: "+err.Error())
+		log.Printf("failed to save article: %v", err)
+		h.jsonError(w, http.StatusInternalServerError, "failed to save article")
 		return
 	}
 	h.jsonResponse(w, http.StatusOK, fmt.Sprintf(`{"id":"%s","title":"%s","status":"created"}`, article.ID, template.JSEscapeString(article.Title)))

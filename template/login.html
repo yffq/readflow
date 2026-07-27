@@ -3,6 +3,7 @@
     <div class="auth-card">
         <h1>Login</h1>
         <form method="POST" action="/login" class="auth-form">
+            <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
             <label>Password
                 <input type="password" name="password" placeholder="Enter your password" required autofocus>
             </label>

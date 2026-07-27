@@ -4,8 +4,9 @@
         <h1>Welcome to Readflow</h1>
         <p>Create your account to get started.</p>
         <form method="POST" action="/setup" class="auth-form">
+            <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
             <label>Password
-                <input type="password" name="password" placeholder="At least 4 characters" required minlength="4" autofocus>
+                <input type="password" name="password" placeholder="At least 8 characters" required minlength="8" autofocus>
             </label>
             <button type="submit" class="btn-primary">Create Account</button>
         </form>

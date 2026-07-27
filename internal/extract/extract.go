@@ -2,9 +2,12 @@ package extract
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
+	"net/url"
 	"regexp"
 	"strings"
 	"time"
@@ -15,9 +18,42 @@ import (
 var (
 	client = &http.Client{
 		Timeout: 30 * time.Second,
+		Transport: &http.Transport{
+			DialContext: func(ctx context.Context, network, addr string) (net.Conn, error) {
+				host, port, err := net.SplitHostPort(addr)
+				if err != nil {
+					return nil, err
+				}
+				ips, err := net.DefaultResolver.LookupIPAddr(ctx, host)
+				if err != nil {
+					return nil, err
+				}
+				for _, ipAddr := range ips {
+					if !isAllowedIP(ipAddr.IP) {
+						return nil, fmt.Errorf("blocked private or local address: %s", host)
+					}
+				}
+				var lastErr error
+				dialer := &net.Dialer{}
+				for _, ipAddr := range ips {
+					conn, err := dialer.DialContext(ctx, network, net.JoinHostPort(ipAddr.IP.String(), port))
+					if err == nil {
+						return conn, nil
+					}
+					lastErr = err
+				}
+				if lastErr != nil {
+					return nil, lastErr
+				}
+				return nil, fmt.Errorf("no resolved addresses for %s", host)
+			},
+		},
 		CheckRedirect: func(req *http.Request, via []*http.Request) error {
 			if len(via) >= 5 {
 				return fmt.Errorf("too many redirects")
+			}
+			if err := ValidatePublicURL(req.URL.String()); err != nil {
+				return err
 			}
 			return nil
 		},
@@ -36,6 +72,9 @@ type ExtractResult struct {
 }
 
 func Extract(url string) (*ExtractResult, error) {
+	if err := ValidatePublicURL(url); err != nil {
+		return nil, err
+	}
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
 		return nil, fmt.Errorf("create request: %w", err)
@@ -53,8 +92,8 @@ func Extract(url string) (*ExtractResult, error) {
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		body, _ := io.ReadAll(io.LimitReader(resp.Body, 1024))
-		return nil, fmt.Errorf("unexpected status %d: %s", resp.StatusCode, strings.TrimSpace(string(body)))
+		io.ReadAll(io.LimitReader(resp.Body, 1024))
+		return nil, fmt.Errorf("unexpected status %d", resp.StatusCode)
 	}
 
 	contentType := resp.Header.Get("Content-Type")
@@ -98,6 +137,46 @@ func Extract(url string) (*ExtractResult, error) {
 		SiteName: article.SiteName,
 		Length:   len(article.TextContent),
 	}, nil
+}
+
+func ValidatePublicURL(rawURL string) error {
+	u, err := url.Parse(strings.TrimSpace(rawURL))
+	if err != nil {
+		return fmt.Errorf("invalid url")
+	}
+	if u.Scheme != "http" && u.Scheme != "https" {
+		return fmt.Errorf("url must start with http:// or https://")
+	}
+	if u.Host == "" {
+		return fmt.Errorf("url must include a host")
+	}
+	if u.User != nil {
+		return fmt.Errorf("url must not include credentials")
+	}
+
+	host := strings.TrimSuffix(strings.ToLower(u.Hostname()), ".")
+	if host == "" {
+		return fmt.Errorf("url must include a host")
+	}
+	if host == "localhost" || strings.HasSuffix(host, ".localhost") || strings.HasSuffix(host, ".local") {
+		return fmt.Errorf("local addresses are not allowed")
+	}
+	if ip := net.ParseIP(host); ip != nil && !isAllowedIP(ip) {
+		return fmt.Errorf("private or local addresses are not allowed")
+	}
+	return nil
+}
+
+func isAllowedIP(ip net.IP) bool {
+	if ip == nil {
+		return false
+	}
+	return ip.IsGlobalUnicast() &&
+		!ip.IsPrivate() &&
+		!ip.IsLoopback() &&
+		!ip.IsLinkLocalUnicast() &&
+		!ip.IsLinkLocalMulticast() &&
+		!ip.IsUnspecified()
 }
 
 func cleanAuthor(author string) string {

@@ -68,10 +68,10 @@ func New(dbPath string) (*Server, error) {
 		r.Use(sm.LoadAndSave)
 
 		r.Get("/setup", h.SetupPage)
-		r.Post("/setup", h.Setup)
+		r.With(middleware.PerIPRateLimit(0.5, 5)).Post("/setup", h.Setup)
 
 		r.Get("/login", h.LoginPage)
-		r.Post("/login", h.Login)
+		r.With(middleware.PerIPRateLimit(0.5, 5)).Post("/login", h.Login)
 
 		r.Group(func(r chi.Router) {
 			r.Use(middleware.AuthRequired(sm))
@@ -93,7 +93,7 @@ func New(dbPath string) (*Server, error) {
 	})
 
 	r.Route("/api/v1", func(r chi.Router) {
-		r.Use(middleware.RateLimit(10, 20))
+		r.Use(middleware.PerIPRateLimit(10, 20))
 		r.Use(middleware.APIKeyAuth(s))
 
 		r.Post("/save", h.APISave)
