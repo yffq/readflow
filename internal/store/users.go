@@ -2,6 +2,7 @@ package store
 
 import (
 	"crypto/rand"
+	"crypto/sha256"
 	"database/sql"
 	"encoding/hex"
 
@@ -101,7 +102,7 @@ func (s *Store) ValidateAPIKey(key string) error {
 		if err := rows.Scan(&keyHash); err != nil {
 			continue
 		}
-		if bcrypt.CompareHashAndPassword([]byte(keyHash), []byte(key)) == nil {
+		if validHash(keyHash, key) {
 			matchedHash = keyHash
 			break
 		}
@@ -115,6 +116,14 @@ func (s *Store) ValidateAPIKey(key string) error {
 	}
 	s.db.Exec("UPDATE api_keys SET last_used = datetime('now') WHERE key_hash = ?", matchedHash)
 	return nil
+}
+
+func validHash(storedHash, key string) bool {
+	if len(storedHash) > 0 && storedHash[0] == '$' {
+		return bcrypt.CompareHashAndPassword([]byte(storedHash), []byte(key)) == nil
+	}
+	hash := sha256.Sum256([]byte(key))
+	return hex.EncodeToString(hash[:]) == storedHash
 }
 
 type ErrInvalidAPIKeyType struct{}

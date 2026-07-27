@@ -2,6 +2,7 @@ package store
 
 import (
 	"crypto/rand"
+	"crypto/sha256"
 	"encoding/hex"
 	"testing"
 	"time"
@@ -73,12 +74,34 @@ func TestStore_CRUD(t *testing.T) {
 
 		err = s.ValidateAPIKey(rawKey)
 		if err != nil {
-			t.Fatalf("ValidateAPIKey: %v", err)
+			t.Fatalf("ValidateAPIKey (bcrypt): %v", err)
 		}
 
 		err = s.ValidateAPIKey("rf_bad_key_1234567890")
 		if err == nil {
 			t.Fatal("expected error for invalid key")
+		}
+
+		// Test backward compatibility with old SHA-256 hashed keys
+		oldRawKey := "rf_old_sha256_key_1234567"
+		oldKeyHash := generateSHA256Hash(oldRawKey)
+		err = s.CreateAPIKey("default", oldRawKey[:11], oldKeyHash, "OldKey")
+		if err != nil {
+			t.Fatalf("CreateAPIKey (sha256): %v", err)
+		}
+		err = s.ValidateAPIKey(oldRawKey)
+		if err != nil {
+			t.Fatalf("ValidateAPIKey (sha256 fallback): %v", err)
+		}
+
+		err = s.DeleteAPIKey("default", keys[0].ID)
+		if err != nil {
+			t.Fatalf("DeleteAPIKey: %v", err)
+		}
+
+		keys, _ = s.ListAPIKeys("default")
+		if len(keys) != 1 {
+			t.Fatalf("expected 1 key after one delete, got %d", len(keys))
 		}
 
 		err = s.DeleteAPIKey("default", keys[0].ID)
@@ -221,4 +244,9 @@ func generateTestAPIKey() (prefix string, rawKey string, keyHash string) {
 	hash, _ := bcrypt.GenerateFromPassword([]byte(rawKey), bcrypt.DefaultCost)
 	keyHash = string(hash)
 	return
+}
+
+func generateSHA256Hash(key string) string {
+	hash := sha256.Sum256([]byte(key))
+	return hex.EncodeToString(hash[:])
 }
