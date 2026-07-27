@@ -50,7 +50,7 @@ page {
 }
 
 .original-link {
-  margin-top: 22rpx;
+  flex-shrink: 0;
 }
 
 .original-label {
@@ -71,6 +71,7 @@ page {
 
 .delete-link {
   flex-shrink: 0;
+  margin-left: auto;
 }
 
 .delete-label {
