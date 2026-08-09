@@ -16,11 +16,11 @@ chrome.tabs.query({ active: true, currentWindow: true }, function (tabs) {
 });
 
 function isReadflowArticlePage(url) {
-  return url && url.indexOf('/read/') !== -1;
+  return url && url.lastIndexOf('/read/') !== -1;
 }
 
 function extractArticleId(url) {
-  var idx = url.indexOf('/read/');
+  var idx = url.lastIndexOf('/read/');
   if (idx === -1) return null;
   var after = url.slice(idx + 6);
   var end = after.indexOf('/');

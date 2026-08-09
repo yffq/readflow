@@ -1,7 +1,7 @@
 (function () {
   var pathname = window.location.pathname;
 
-  if (pathname.indexOf('/read/') === -1) return;
+  if (pathname.lastIndexOf('/read/') === -1) return;
 
   chrome.storage.sync.get(
     {
@@ -68,7 +68,7 @@
   }
 
   function extractArticleId() {
-    var idx = window.location.pathname.indexOf('/read/');
+    var idx = window.location.pathname.lastIndexOf('/read/');
     if (idx === -1) return null;
     var after = window.location.pathname.slice(idx + 6);
     var end = after.indexOf('/');
