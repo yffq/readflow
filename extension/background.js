@@ -61,12 +61,13 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.action === 'clipToObsidian') {
-    clipToObsidian(message.articleId, message.folder).then(sendResponse);
+    var senderTabId = (sender && sender.tab && sender.tab.id) || null;
+    clipToObsidian(message.articleId, message.folder, senderTabId).then(sendResponse);
     return true;
   }
 });
 
-async function clipToObsidian(articleId, folder) {
+async function clipToObsidian(articleId, folder, senderTabId) {
   try {
     const settings = await loadSettings();
     if (!settings.apiKey || !settings.serverUrl) {
@@ -108,12 +109,12 @@ async function clipToObsidian(articleId, folder) {
     if (fullUri.length > 1500000) {
       const liteMarkdown = formatArticleMarkdown(article, true);
       const liteUri = buildUri(settings.obsidianVault, filePath, liteMarkdown);
-      chrome.tabs.create({ url: liteUri, active: false });
+      openObsidianUri(liteUri, senderTabId);
       chrome.storage.sync.set({ obsidianLastFolder: folder });
       return { success: true, useClipboard: true, markdown: markdown };
     }
 
-    chrome.tabs.create({ url: fullUri, active: false });
+    openObsidianUri(fullUri, senderTabId);
     chrome.storage.sync.set({ obsidianLastFolder: folder });
     return { success: true };
   } catch (err) {
@@ -174,6 +175,20 @@ function slug(s) {
 
 function encodePath(p) {
   return p.split('/').map(function (s) { return encodeURIComponent(s); }).join('/');
+}
+
+function openObsidianUri(uri, senderTabId) {
+  if (senderTabId) {
+    chrome.tabs.update(senderTabId, { url: uri });
+  } else {
+    chrome.tabs.query({ active: true }, function (tabs) {
+      if (tabs && tabs[0] && tabs[0].id) {
+        chrome.tabs.update(tabs[0].id, { url: uri });
+      } else {
+        chrome.tabs.create({ url: uri, active: false });
+      }
+    });
+  }
 }
 
 function buildUri(vault, filePath, content) {
