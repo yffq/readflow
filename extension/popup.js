@@ -124,6 +124,10 @@ clipBtn.addEventListener('click', function () {
             clipStatusEl.textContent = 'Failed to copy to clipboard.';
             clipStatusEl.className = 'status status-err';
           });
+        } else if (resp.obsidianUri) {
+          chrome.tabs.create({ url: resp.obsidianUri, active: false });
+          clipStatusEl.textContent = 'Clipped to Obsidian!';
+          clipStatusEl.className = 'status status-ok';
         } else {
           clipStatusEl.textContent = 'Clipped to Obsidian!';
           clipStatusEl.className = 'status status-ok';

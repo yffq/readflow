@@ -106,7 +106,7 @@ async function clipToObsidian(articleId) {
     if (settings.obsidianVault) {
       params.push('vault=' + encodeURIComponent(settings.obsidianVault));
     }
-    params.push('file=' + encodeURIComponent(filePath));
+    params.push('file=' + encodePath(filePath));
     params.push('content=' + encodeURIComponent(markdown));
     const uri = 'obsidian://new?' + params.join('&');
 
@@ -114,9 +114,7 @@ async function clipToObsidian(articleId) {
       return { success: true, useClipboard: true, markdown: markdown };
     }
 
-    await chrome.tabs.create({ url: uri, active: false });
-
-    return { success: true };
+    return { success: true, obsidianUri: uri };
   } catch (err) {
     return { success: false, error: err.message || 'Unknown error.' };
   }
@@ -168,6 +166,10 @@ function sanitizeFilename(name) {
 
 function slug(s) {
   return s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+}
+
+function encodePath(p) {
+  return p.split('/').map(function (s) { return encodeURIComponent(s); }).join('/');
 }
 
 function loadSettings() {

@@ -54,6 +54,9 @@
               }).catch(function () {
                 showToast('Failed to copy to clipboard.', true);
               });
+            } else if (resp.obsidianUri) {
+              window.open(resp.obsidianUri, '_blank');
+              showToast('Clipped to Obsidian!', false);
             } else {
               showToast('Clipped to Obsidian!', false);
             }
