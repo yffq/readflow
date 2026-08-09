@@ -15,6 +15,8 @@
       body { background: #1f2937; color: #f3f4f6; }
       input { background: #374151; color: #f3f4f6; border-color: #4b5563; }
       .status-ok { color: #10b981; }
+      .section-title { color: #a78bfa; }
+      hr { border-color: #4b5563; }
     }
     h2 { margin: 0 0 12px; font-size: 1rem; }
     .info { font-size: 0.8rem; color: #666; margin-bottom: 12px; word-break: break-all; }
@@ -31,6 +33,12 @@
     }
     button:hover { background: #1d4ed8; }
     button:disabled { opacity: 0.5; cursor: not-allowed; }
+    .btn-obsidian {
+      background: #7c3aed;
+    }
+    .btn-obsidian:hover {
+      background: #6d28d9;
+    }
     .status { margin-top: 10px; font-size: 0.85rem; text-align: center; min-height: 20px; }
     .status-ok { color: #10b981; }
     .status-err { color: #dc2626; }
@@ -42,19 +50,35 @@
       color: #2563eb;
       text-decoration: none;
     }
-    .html-toggle {
-      margin-top: 12px;
+    .section-title {
       font-size: 0.8rem;
-      color: #666;
+      color: #7c3aed;
+      font-weight: 600;
+      margin: 14px 0 6px;
     }
-    .html-toggle label { cursor: pointer; }
+    hr {
+      border: none;
+      border-top: 1px solid #e5e7eb;
+      margin: 12px 0;
+    }
+    #obsidian-section {
+      display: none;
+    }
   </style>
 </head>
 <body>
   <h2>Save to Readflow</h2>
   <div class="info" id="page-info">Loading...</div>
   <button id="save-btn">Save Current Page</button>
-  <div class="status" id="status"></div>
+  <div class="status" id="save-status"></div>
+
+  <div id="obsidian-section">
+    <hr>
+    <div class="section-title">Obsidian</div>
+    <button id="clip-btn" class="btn-obsidian">Clip to Obsidian</button>
+    <div class="status" id="clip-status"></div>
+  </div>
+
   <a class="settings-link" href="#" id="open-options">Settings</a>
 
   <script src="popup.js"></script>

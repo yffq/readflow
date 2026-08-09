@@ -1,32 +1,66 @@
-const infoEl = document.getElementById('page-info');
-const saveBtn = document.getElementById('save-btn');
-const statusEl = document.getElementById('status');
+var infoEl = document.getElementById('page-info');
+var saveBtn = document.getElementById('save-btn');
+var saveStatusEl = document.getElementById('save-status');
+var obsidianSection = document.getElementById('obsidian-section');
+var clipBtn = document.getElementById('clip-btn');
+var clipStatusEl = document.getElementById('clip-status');
 
-let currentTab = null;
+var currentTab = null;
 
-chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+chrome.tabs.query({ active: true, currentWindow: true }, function (tabs) {
   if (tabs[0]) {
     currentTab = tabs[0];
     infoEl.textContent = (currentTab.title || 'Untitled') + '\n' + currentTab.url;
+    checkObsidianSection();
   }
 });
 
-saveBtn.addEventListener('click', () => {
+function isReadflowArticlePage(url) {
+  return url && url.indexOf('/read/') !== -1;
+}
+
+function extractArticleId(url) {
+  var idx = url.indexOf('/read/');
+  if (idx === -1) return null;
+  var after = url.slice(idx + 6);
+  var end = after.indexOf('/');
+  if (end !== -1) after = after.slice(0, end);
+  end = after.indexOf('?');
+  if (end !== -1) after = after.slice(0, end);
+  end = after.indexOf('#');
+  if (end !== -1) after = after.slice(0, end);
+  return after || null;
+}
+
+function checkObsidianSection() {
+  if (!isReadflowArticlePage(currentTab && currentTab.url)) return;
+
+  chrome.storage.sync.get(
+    { obsidianEnabled: false, obsidianVault: '' },
+    function (settings) {
+      if (settings.obsidianEnabled && settings.obsidianVault) {
+        obsidianSection.style.display = 'block';
+      }
+    }
+  );
+}
+
+saveBtn.addEventListener('click', function () {
   if (!currentTab) return;
   saveBtn.disabled = true;
-  statusEl.textContent = 'Saving...';
-  statusEl.className = 'status';
+  saveStatusEl.textContent = 'Saving...';
+  saveStatusEl.className = 'status';
 
-  chrome.storage.sync.get({ apiKey: '', serverUrl: '' }, (settings) => {
+  chrome.storage.sync.get({ apiKey: '', serverUrl: '' }, function (settings) {
     if (!settings.apiKey) {
-      statusEl.textContent = 'Configure API key in Settings.';
-      statusEl.className = 'status status-err';
+      saveStatusEl.textContent = 'Configure API key in Settings.';
+      saveStatusEl.className = 'status status-err';
       saveBtn.disabled = false;
       return;
     }
 
-    const apiUrl = settings.serverUrl.replace(/\/$/, '') + '/api/v1/save';
-    const body = {
+    var apiUrl = settings.serverUrl.replace(/\/$/, '') + '/api/v1/save';
+    var body = {
       url: currentTab.url,
       title: currentTab.title || ''
     };
@@ -39,31 +73,60 @@ saveBtn.addEventListener('click', () => {
       },
       body: JSON.stringify(body)
     })
-      .then(res => {
+      .then(function (res) {
         if (!res.ok) {
-          return res.json().then(d => { throw new Error(d.error || 'HTTP ' + res.status); });
+          return res.json().then(function (d) { throw new Error(d.error || 'HTTP ' + res.status); });
         }
         return res.json();
       })
-      .then(data => {
+      .then(function (data) {
         if (data.error) {
-          statusEl.textContent = 'Error: ' + data.error;
-          statusEl.className = 'status status-err';
+          saveStatusEl.textContent = 'Error: ' + data.error;
+          saveStatusEl.className = 'status status-err';
         } else {
-          statusEl.textContent = 'Saved!';
-          statusEl.className = 'status status-ok';
+          saveStatusEl.textContent = 'Saved!';
+          saveStatusEl.className = 'status status-ok';
         }
         saveBtn.disabled = false;
       })
-      .catch(err => {
-        statusEl.textContent = 'Failed: ' + err.message;
-        statusEl.className = 'status status-err';
+      .catch(function (err) {
+        saveStatusEl.textContent = 'Failed: ' + err.message;
+        saveStatusEl.className = 'status status-err';
         saveBtn.disabled = false;
       });
   });
 });
 
-document.getElementById('open-options').addEventListener('click', (e) => {
+clipBtn.addEventListener('click', function () {
+  if (!currentTab) return;
+  var articleId = extractArticleId(currentTab.url);
+  if (!articleId) return;
+
+  clipBtn.disabled = true;
+  clipStatusEl.textContent = 'Clipping...';
+  clipStatusEl.className = 'status';
+
+  chrome.runtime.sendMessage(
+    { action: 'clipToObsidian', articleId: articleId },
+    function (resp) {
+      clipBtn.disabled = false;
+      if (chrome.runtime.lastError) {
+        clipStatusEl.textContent = chrome.runtime.lastError.message;
+        clipStatusEl.className = 'status status-err';
+        return;
+      }
+      if (resp && resp.success) {
+        clipStatusEl.textContent = 'Clipped to Obsidian!';
+        clipStatusEl.className = 'status status-ok';
+      } else {
+        clipStatusEl.textContent = (resp && resp.error) ? resp.error : 'Failed to clip.';
+        clipStatusEl.className = 'status status-err';
+      }
+    }
+  );
+});
+
+document.getElementById('open-options').addEventListener('click', function (e) {
   e.preventDefault();
   chrome.runtime.openOptionsPage();
 });
