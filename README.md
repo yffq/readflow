@@ -157,6 +157,8 @@ curl -X POST https://your-domain.com/api/v1/delete \
 
 笔记以 Markdown 格式保存，文件名格式为 `{日期} {标题}.md`，并包含 YAML frontmatter 元数据（标题、作者、来源、标签等）。
 
+极少数超长文章（URI 超过 1.5MB）会自动降级为剪贴板复制，粘贴到 Obsidian 即可。
+
 ## 微信小程序
 
 在微信开发者工具中打开 `miniprogram/` 目录即可运行。
