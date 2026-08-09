@@ -127,49 +127,23 @@ saveBtn.addEventListener('click', function () {
   saveStatusEl.textContent = 'Saving...';
   saveStatusEl.className = 'status';
 
-  chrome.storage.sync.get({ apiKey: '', serverUrl: '' }, function (settings) {
-    if (!settings.apiKey) {
-      saveStatusEl.textContent = 'Configure API key in Settings.';
+  chrome.runtime.sendMessage({
+    action: 'saveToReadflow',
+    page: { url: currentTab.url, title: currentTab.title || '' }
+  }, function (result) {
+    saveBtn.disabled = false;
+    if (chrome.runtime.lastError) {
+      saveStatusEl.textContent = 'Failed: ' + chrome.runtime.lastError.message;
       saveStatusEl.className = 'status status-err';
-      saveBtn.disabled = false;
       return;
     }
-
-    var apiUrl = settings.serverUrl.replace(/\/$/, '') + '/api/v1/save';
-    var body = {
-      url: currentTab.url,
-      title: currentTab.title || ''
-    };
-
-    fetch(apiUrl, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer ' + settings.apiKey
-      },
-      body: JSON.stringify(body)
-    })
-      .then(function (res) {
-        if (!res.ok) {
-          return res.json().then(function (d) { throw new Error(d.error || 'HTTP ' + res.status); });
-        }
-        return res.json();
-      })
-      .then(function (data) {
-        if (data.error) {
-          saveStatusEl.textContent = 'Error: ' + data.error;
-          saveStatusEl.className = 'status status-err';
-        } else {
-          saveStatusEl.textContent = 'Saved!';
-          saveStatusEl.className = 'status status-ok';
-        }
-        saveBtn.disabled = false;
-      })
-      .catch(function (err) {
-        saveStatusEl.textContent = 'Failed: ' + err.message;
-        saveStatusEl.className = 'status status-err';
-        saveBtn.disabled = false;
-      });
+    if (!result || !result.success) {
+      saveStatusEl.textContent = (result && result.error) || 'Failed to save page.';
+      saveStatusEl.className = 'status status-err';
+      return;
+    }
+    saveStatusEl.textContent = result.data && result.data.status === 'duplicate' ? 'Already saved.' : 'Saved!';
+    saveStatusEl.className = 'status status-ok';
   });
 });
 

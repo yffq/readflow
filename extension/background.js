@@ -1,3 +1,5 @@
+importScripts('readflow-api.js', 'obsidian-navigation.js');
+
 chrome.runtime.onInstalled.addListener(() => {
   chrome.contextMenus.create({
     id: 'save-link',
@@ -11,7 +13,7 @@ chrome.runtime.onInstalled.addListener(() => {
   });
 });
 
-chrome.contextMenus.onClicked.addListener((info, tab) => {
+chrome.contextMenus.onClicked.addListener(async (info, tab) => {
   let url = '';
   let title = '';
 
@@ -24,47 +26,40 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
   }
 
   if (!url) return;
-
-  loadSettings().then(settings => {
-    if (!settings.apiKey || !settings.serverUrl) {
-      console.log('Readflow: Please configure API key and server URL in extension options.');
-      return;
-    }
-
-    const body = { url: url };
-    if (title) body.title = title;
-
-    fetch(settings.serverUrl.replace(/\/$/, '') + '/api/v1/save', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer ' + settings.apiKey
-      },
-      body: JSON.stringify(body)
-    })
-      .then(res => {
-        if (!res.ok) {
-          return res.json().then(d => { throw new Error(d.error || 'HTTP ' + res.status); });
-        }
-        return res.json();
-      })
-      .then(data => {
-        if (data.error) {
-          console.log('Readflow error: ' + data.error);
-        } else {
-          console.log('Readflow: Saved!');
-        }
-      })
-      .catch(err => console.log('Readflow: ' + err.message));
-  });
+  const result = await saveToReadflow({ url: url, title: title });
+  showSaveNotification(result);
 });
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  if (message.action === 'saveToReadflow') {
+    saveToReadflow(message.page).then(sendResponse);
+    return true;
+  }
   if (message.action === 'clipToObsidian') {
     clipToObsidian(message.articleId, message.folder).then(sendResponse);
     return true;
   }
 });
+
+async function saveToReadflow(page) {
+  try {
+    const settings = await loadSettings();
+    const data = await ReadflowAPI.savePage(settings, page);
+    return { success: true, data: data };
+  } catch (err) {
+    return { success: false, error: err.message || 'Failed to save page.' };
+  }
+}
+
+function showSaveNotification(result) {
+  const duplicate = result.success && result.data && result.data.status === 'duplicate';
+  chrome.notifications.create({
+    type: 'basic',
+    iconUrl: 'icons/icon128.png',
+    title: result.success ? (duplicate ? 'Already in Readflow' : 'Saved to Readflow') : 'Readflow save failed',
+    message: result.success ? (duplicate ? 'This page was already saved.' : 'The page was saved successfully.') : result.error
+  });
+}
 
 async function clipToObsidian(articleId, folder) {
   try {
@@ -103,18 +98,10 @@ async function clipToObsidian(articleId, folder) {
     const filename = (datePrefix ? datePrefix + ' ' : '') + sanitizeFilename(article.title) + '.md';
     const filePath = folder.replace(/\/$/, '') + '/' + filename;
 
-    const fullUri = buildUri(settings.obsidianVault, filePath, markdown);
-
-    if (fullUri.length > 1500000) {
-      const liteMarkdown = formatArticleMarkdown(article, true);
-      const liteUri = buildUri(settings.obsidianVault, filePath, liteMarkdown);
-      openObsidianTab(liteUri);
-      chrome.storage.sync.set({ obsidianLastFolder: folder });
-      return { success: true, useClipboard: true, markdown: markdown };
-    }
-
-    openObsidianTab(fullUri);
-    chrome.storage.sync.set({ obsidianLastFolder: folder });
+    const copied = await copyMarkdownToClipboard(markdown);
+    const obsidianUri = ObsidianNavigation.buildNewNoteUri(settings.obsidianVault, filePath, markdown, copied);
+    await openObsidianTab(obsidianUri);
+    await chrome.storage.sync.set({ obsidianLastFolder: folder });
     return { success: true };
   } catch (err) {
     return { success: false, error: err.message || 'Unknown error.' };
@@ -172,24 +159,22 @@ function slug(s) {
   return s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
 }
 
-function encodePath(p) {
-  return p.split('/').map(function (s) { return encodeURIComponent(s); }).join('/');
+async function openObsidianTab(uri) {
+  await ObsidianNavigation.openInCurrentTab(chrome, uri);
 }
 
-function openObsidianTab(uri) {
-  chrome.tabs.create({ url: 'about:blank', active: false }, function (tab) {
-    chrome.tabs.update(tab.id, { url: uri });
-  });
-}
-
-function buildUri(vault, filePath, content) {
-  var params = [];
-  if (vault) {
-    params.push('vault=' + encodeURIComponent(vault));
+async function copyMarkdownToClipboard(markdown) {
+  try {
+    const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
+    if (!tabs || !tabs[0] || !tabs[0].id) return false;
+    const response = await chrome.tabs.sendMessage(tabs[0].id, {
+      action: 'copyReadflowMarkdown',
+      text: markdown
+    });
+    return Boolean(response && response.success);
+  } catch (err) {
+    return false;
   }
-  params.push('file=' + encodePath(filePath));
-  params.push('content=' + encodeURIComponent(content));
-  return 'obsidian://new?' + params.join('&');
 }
 
 function loadSettings() {

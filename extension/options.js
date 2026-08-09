@@ -5,6 +5,7 @@ var obsidianVaultInput = document.getElementById('obsidianVault');
 var folderListEl = document.getElementById('folder-list');
 var addFolderBtn = document.getElementById('add-folder-btn');
 var saveBtn = document.getElementById('save-btn');
+var saveStatusEl = document.getElementById('save-status');
 
 chrome.storage.sync.get({
   apiKey: '',
@@ -72,6 +73,21 @@ addFolderBtn.addEventListener('click', function () {
 });
 
 saveBtn.addEventListener('click', function () {
+  var serverUrl = serverUrlInput.value.trim();
+  var apiKey = apiKeyInput.value.trim();
+  try {
+    var parsedServerUrl = new URL(serverUrl);
+    if (parsedServerUrl.protocol !== 'http:' && parsedServerUrl.protocol !== 'https:') throw new Error();
+  } catch (err) {
+    saveStatusEl.textContent = 'Enter a valid Server URL including http:// or https://.';
+    saveStatusEl.className = 'status status-err';
+    return;
+  }
+  if (!apiKey) {
+    saveStatusEl.textContent = 'Enter an API key.';
+    saveStatusEl.className = 'status status-err';
+    return;
+  }
   var inputs = folderListEl.querySelectorAll('input');
   var folders = [];
   for (var i = 0; i < inputs.length; i++) {
@@ -87,14 +103,21 @@ saveBtn.addEventListener('click', function () {
     }
 
     chrome.storage.sync.set({
-      serverUrl: serverUrlInput.value.trim(),
-      apiKey: apiKeyInput.value.trim(),
+      serverUrl: serverUrl.replace(/\/$/, ''),
+      apiKey: apiKey,
       obsidianEnabled: obsidianEnabledCheckbox.checked,
       obsidianVault: obsidianVaultInput.value.trim(),
       obsidianFolders: folders,
       obsidianLastFolder: lastFolder || folders[0]
     }, function () {
+      if (chrome.runtime.lastError) {
+        saveStatusEl.textContent = 'Failed to save settings: ' + chrome.runtime.lastError.message;
+        saveStatusEl.className = 'status status-err';
+        return;
+      }
       saveBtn.textContent = 'Saved!';
+      saveStatusEl.textContent = 'Settings saved.';
+      saveStatusEl.className = 'status status-ok';
       setTimeout(function () { saveBtn.textContent = 'Save'; }, 1500);
     });
   });

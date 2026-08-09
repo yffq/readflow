@@ -41,11 +41,10 @@ function encodePath(p) {
 }
 
 function buildUri(vault, filePath, content) {
-  var params = [];
+  var params = ['file=' + encodeURIComponent(filePath)];
   if (vault) {
     params.push('vault=' + encodeURIComponent(vault));
   }
-  params.push('file=' + encodePath(filePath));
   params.push('content=' + encodeURIComponent(content));
   return 'obsidian://new?' + params.join('&');
 }
@@ -127,16 +126,16 @@ console.log('=== buildUri ===');
 var uri1 = buildUri('MyVault', 'Readflow/Note.md', '# Hello');
 assert(uri1.startsWith('obsidian://new?'), 'starts with obsidian://new scheme');
 assert(uri1.includes('vault=MyVault'), 'includes vault param');
-assert(uri1.includes('file=Readflow/Note.md'), 'file path has literal slashes');
+assert(uri1.includes('file=Readflow%2FNote.md'), 'file path is encoded as one parameter');
 assert(uri1.includes('content=' + encodeURIComponent('# Hello')), 'content is encoded');
 
 var uri2 = buildUri('', 'Readflow/Note.md', 'hi');
 assert(!uri2.includes('vault='), 'omits vault when empty');
-assert(uri2.includes('file=Readflow/Note.md'), 'includes file without vault');
+assert(uri2.includes('file=Readflow%2FNote.md'), 'includes file without vault');
 
 var uri3 = buildUri('My Vault', 'Folder/Title with spaces.md', 'content');
 assert(uri3.includes('vault=My%20Vault'), 'encodes vault with spaces');
-assert(uri3.includes('Folder/Title%20with%20spaces.md'), 'encodes spaces in filename');
+assert(uri3.includes('Folder%2FTitle%20with%20spaces.md'), 'encodes full file path');
 
 console.log('=== formatArticleMarkdown (normal) ===');
 
@@ -245,7 +244,7 @@ assertEqual(normalResp.markdown, undefined, 'E2E normal: no markdown in response
 var normalUri = buildExpectedUri('MyVault', 'Readflow', normalArticle);
 assert(normalUri.startsWith('obsidian://new?'), 'E2E URI: starts with obsidian scheme');
 assert(normalUri.includes('vault=MyVault'), 'E2E URI: vault present');
-assert(normalUri.includes('file=Readflow/'), 'E2E URI: folder in file path');
+assert(normalUri.includes('file=Readflow%2F'), 'E2E URI: folder in file path');
 assert(normalUri.includes('2024-06-01%20Normal%20Article.md'), 'E2E URI: date-prefixed filename');
 
 // E2E: No vault → omits vault param
@@ -255,13 +254,13 @@ assert(!noVaultUri.includes('vault='), 'E2E URI: omits vault param when empty');
 // E2E: Different folders produce different URIs
 var workUri = buildExpectedUri('V', 'Work', normalArticle);
 var personalUri = buildExpectedUri('V', 'Personal', normalArticle);
-assert(workUri.includes('file=Work/'), 'E2E URI: Work folder');
-assert(personalUri.includes('file=Personal/'), 'E2E URI: Personal folder');
+assert(workUri.includes('file=Work%2F'), 'E2E URI: Work folder');
+assert(personalUri.includes('file=Personal%2F'), 'E2E URI: Personal folder');
 assert(workUri !== personalUri, 'E2E URI: different folders produce different URIs');
 
 // E2E: Nested custom folder
 var nestedUri = buildExpectedUri('V', 'MyArticles/2024', normalArticle);
-assert(nestedUri.includes('file=MyArticles/2024/'), 'E2E URI: nested folder path');
+assert(nestedUri.includes('file=MyArticles%2F2024%2F'), 'E2E URI: nested folder path');
 
 // E2E: Huge article → clipboard fallback
 var hugeArticle = {
@@ -284,7 +283,7 @@ var noDateArticle = {
 var noDateResp = simulateClip(noDateArticle, 'V', 'Readflow');
 assertEqual(noDateResp.success, true, 'E2E no date: success');
 var noDateUri = buildExpectedUri('V', 'Readflow', noDateArticle);
-assert(noDateUri.includes('file=Readflow/No%20Date.md'), 'E2E no date: no date prefix');
+assert(noDateUri.includes('file=Readflow%2FNo%20Date.md'), 'E2E no date: no date prefix');
 
 // ========== Results ==========
 console.log('');

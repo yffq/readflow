@@ -1,4 +1,36 @@
 (function () {
+  chrome.runtime.onMessage.addListener(function (message, sender, sendResponse) {
+    if (message.action !== 'copyReadflowMarkdown') return;
+
+    copyText(message.text).then(function () {
+      sendResponse({ success: true });
+    }).catch(function (err) {
+      sendResponse({ success: false, error: err.message || 'Failed to copy article content.' });
+    });
+    return true;
+  });
+
+  async function copyText(text) {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      try {
+        await navigator.clipboard.writeText(text);
+        return;
+      } catch (err) {
+        // Fall through to execCommand for pages that restrict Clipboard API access.
+      }
+    }
+    var textarea = document.createElement('textarea');
+    textarea.value = text;
+    textarea.style.position = 'fixed';
+    textarea.style.opacity = '0';
+    document.body.appendChild(textarea);
+    textarea.focus();
+    textarea.select();
+    var copied = document.execCommand('copy');
+    textarea.remove();
+    if (!copied) throw new Error('Browser denied clipboard access.');
+  }
+
   var pathname = window.location.pathname;
 
   if (pathname.lastIndexOf('/read/') === -1) return;

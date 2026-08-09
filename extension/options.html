@@ -75,6 +75,9 @@
       color: #999;
       margin-top: 16px;
     }
+    .status { min-height: 20px; margin-top: 8px; font-size: 0.8rem; text-align: center; }
+    .status-err { color: #dc2626; }
+    .status-ok { color: #059669; }
     #save-btn {
       width: 100%;
       margin-top: 8px;
@@ -156,6 +159,7 @@
   <button id="add-folder-btn">+ Add folder</button>
 
   <button id="save-btn">Save</button>
+  <div id="save-status" class="status" role="status"></div>
   <div class="note">
     No Obsidian plugin required. Uses the built-in obsidian:// URI scheme.
   </div>

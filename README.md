@@ -180,4 +180,6 @@ go test ./...
 
 # 运行扩展单元测试
 node extension/test.js
+node extension/save-test.js
+node extension/obsidian-navigation-test.js
 ```
