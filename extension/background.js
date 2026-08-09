@@ -61,12 +61,12 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.action === 'clipToObsidian') {
-    clipToObsidian(message.articleId).then(sendResponse);
+    clipToObsidian(message.articleId, message.folder).then(sendResponse);
     return true;
   }
 });
 
-async function clipToObsidian(articleId) {
+async function clipToObsidian(articleId, folder) {
   try {
     const settings = await loadSettings();
     if (!settings.apiKey || !settings.serverUrl) {
@@ -75,6 +75,8 @@ async function clipToObsidian(articleId) {
     if (!settings.obsidianEnabled) {
       return { success: false, error: 'Obsidian clipping not configured. Enable it in extension options.' };
     }
+
+    folder = folder || (settings.obsidianFolders && settings.obsidianFolders[0]) || 'Readflow';
 
     const articleUrl = settings.serverUrl.replace(/\/$/, '') + '/api/v1/article/' + encodeURIComponent(articleId);
     const resp = await fetch(articleUrl, {
@@ -99,7 +101,6 @@ async function clipToObsidian(articleId) {
     const markdown = formatArticleMarkdown(article);
     const datePrefix = article.created_at ? article.created_at.slice(0, 10) : '';
     const filename = (datePrefix ? datePrefix + ' ' : '') + sanitizeFilename(article.title) + '.md';
-    const folder = settings.obsidianFolder || 'Readflow';
     const filePath = folder.replace(/\/$/, '') + '/' + filename;
 
     const fullUri = buildUri(settings.obsidianVault, filePath, markdown);
@@ -107,9 +108,11 @@ async function clipToObsidian(articleId) {
     if (fullUri.length > 1500000) {
       const liteMarkdown = formatArticleMarkdown(article, true);
       const liteUri = buildUri(settings.obsidianVault, filePath, liteMarkdown);
+      chrome.storage.sync.set({ obsidianLastFolder: folder });
       return { success: true, useClipboard: true, markdown: markdown, obsidianUri: liteUri };
     }
 
+    chrome.storage.sync.set({ obsidianLastFolder: folder });
     return { success: true, obsidianUri: fullUri };
   } catch (err) {
     return { success: false, error: err.message || 'Unknown error.' };
@@ -187,6 +190,7 @@ function loadSettings() {
     serverUrl: '',
     obsidianEnabled: false,
     obsidianVault: '',
-    obsidianFolder: 'Readflow'
+    obsidianFolders: ['Readflow'],
+    obsidianLastFolder: 'Readflow'
   });
 }

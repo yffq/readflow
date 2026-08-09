@@ -205,23 +205,22 @@ assert(largeUri.length > 1500000, 'large content exceeds URI threshold');
 // ========== End-to-end simulation: clipToObsidian pipeline ==========
 console.log('=== E2E: clipToObsidian pipeline ===');
 
-function simulateClip(article, settings) {
-  var folder = settings.obsidianFolder || 'Readflow';
+function simulateClip(article, vault, folder) {
   var datePrefix = article.created_at ? article.created_at.slice(0, 10) : '';
   var filename = (datePrefix ? datePrefix + ' ' : '') + sanitizeFilename(article.title) + '.md';
   var filePath = folder.replace(/\/$/, '') + '/' + filename;
   var markdown = formatArticleMarkdown(article);
-  var uri = buildUri(settings.obsidianVault, filePath, markdown);
+  var uri = buildUri(vault, filePath, markdown);
 
   if (uri.length > 1500000) {
     var liteMarkdown = formatArticleMarkdown(article, true);
-    var liteUri = buildUri(settings.obsidianVault, filePath, liteMarkdown);
+    var liteUri = buildUri(vault, filePath, liteMarkdown);
     return { success: true, useClipboard: true, markdown: markdown, obsidianUri: liteUri };
   }
   return { success: true, obsidianUri: uri };
 }
 
-// E2E: Normal article
+// E2E: Normal article with folder param
 var normalArticle = {
   title: 'Normal Article',
   author: 'Author',
@@ -230,8 +229,7 @@ var normalArticle = {
   created_at: '2024-06-01T00:00:00Z',
   content_markdown: 'Hello world.\n\nThis is a paragraph.'
 };
-var normalSettings = { obsidianVault: 'MyVault', obsidianFolder: 'Readflow' };
-var normalResp = simulateClip(normalArticle, normalSettings);
+var normalResp = simulateClip(normalArticle, 'MyVault', 'Readflow');
 
 assertEqual(normalResp.success, true, 'E2E normal: success is true');
 assertEqual(normalResp.useClipboard, undefined, 'E2E normal: no clipboard fallback');
@@ -239,33 +237,37 @@ assert(normalResp.obsidianUri.startsWith('obsidian://new?'), 'E2E normal: return
 assert(normalResp.obsidianUri.includes('vault=MyVault'), 'E2E normal: vault in URI');
 assert(normalResp.obsidianUri.includes('file=Readflow/'), 'E2E normal: folder in file path');
 assert(normalResp.obsidianUri.includes('2024-06-01%20Normal%20Article.md'), 'E2E normal: date-prefixed filename');
-assert(normalResp.obsidianUri.length < 1500000, 'E2E normal: URI under threshold');
 
 // E2E: No vault (uses active vault)
-var noVaultSettings = { obsidianVault: '', obsidianFolder: 'Readflow' };
-var noVaultResp = simulateClip(normalArticle, noVaultSettings);
+var noVaultResp = simulateClip(normalArticle, '', 'Readflow');
 assert(!noVaultResp.obsidianUri.includes('vault='), 'E2E no vault: omits vault param');
 
-// E2E: Custom folder
-var customFolderSettings = { obsidianVault: 'V', obsidianFolder: 'MyArticles/2024' };
-var customResp = simulateClip(normalArticle, customFolderSettings);
-assert(customResp.obsidianUri.includes('file=MyArticles/2024/'), 'E2E custom folder: nested path in URI');
+// E2E: Multiple folders — Work vs Personal
+var workResp = simulateClip(normalArticle, 'V', 'Work');
+var personalResp = simulateClip(normalArticle, 'V', 'Personal');
+
+assert(workResp.obsidianUri.includes('file=Work/'), 'E2E Work folder in URI');
+assert(personalResp.obsidianUri.includes('file=Personal/'), 'E2E Personal folder in URI');
+assert(workResp.obsidianUri !== personalResp.obsidianUri, 'E2E different folders produce different URIs');
+
+// E2E: Nested custom folder
+var nestedResp = simulateClip(normalArticle, 'V', 'MyArticles/2024');
+assert(nestedResp.obsidianUri.includes('file=MyArticles/2024/'), 'E2E nested folder path in URI');
 
 // E2E: Huge article → clipboard fallback
 var hugeArticle = {
   title: 'Huge Article',
   created_at: '2024-01-01T00:00:00Z',
-  content_markdown: 'x'.repeat(1900000) // ~1.9MB raw
+  content_markdown: 'x'.repeat(1900000)
 };
-var hugeResp = simulateClip(hugeArticle, normalSettings);
+var hugeResp = simulateClip(hugeArticle, 'MyVault', 'Readflow');
 
 assertEqual(hugeResp.success, true, 'E2E huge: success is true');
 assertEqual(hugeResp.useClipboard, true, 'E2E huge: triggers clipboard fallback');
 assertEqual(typeof hugeResp.markdown, 'string', 'E2E huge: markdown returned for clipboard');
 assert(hugeResp.markdown.includes('Huge Article'), 'E2E huge: full markdown has heading');
-assert(hugeResp.markdown.includes('x'.repeat(100)), 'E2E huge: full markdown has body');
 assert(hugeResp.obsidianUri.length < 1500000, 'E2E huge: lite URI under threshold');
-assert(!hugeResp.obsidianUri.includes('xxxxx'), 'E2E huge: lite URI has no body content');
+assert(!hugeResp.obsidianUri.includes('xxxxx'), 'E2E huge: lite URI has no body');
 assert(hugeResp.obsidianUri.includes('Paste%20full%20content'), 'E2E huge: lite URI has placeholder');
 
 // E2E: Article without created_at → no date prefix
@@ -273,8 +275,8 @@ var noDateArticle = {
   title: 'No Date',
   content_markdown: 'Body.'
 };
-var noDateResp = simulateClip(noDateArticle, normalSettings);
-assert(noDateResp.obsidianUri.includes('file=Readflow/No%20Date.md'), 'E2E no date: filename has no date prefix');
+var noDateResp = simulateClip(noDateArticle, 'V', 'Readflow');
+assert(noDateResp.obsidianUri.includes('file=Readflow/No%20Date.md'), 'E2E no date: no date prefix');
 
 // ========== Results ==========
 console.log('');

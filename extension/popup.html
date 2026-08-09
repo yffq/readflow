@@ -42,6 +42,26 @@
     .status { margin-top: 10px; font-size: 0.85rem; text-align: center; min-height: 20px; }
     .status-ok { color: #10b981; }
     .status-err { color: #dc2626; }
+    .folder-btn {
+      display: block;
+      width: 100%;
+      padding: 8px 12px;
+      margin-bottom: 6px;
+      background: #fff;
+      color: #7c3aed;
+      border: 1px solid #c4b5fd;
+      border-radius: 8px;
+      font-size: 0.85rem;
+      font-weight: 500;
+    }
+    .folder-btn:hover { background: #f5f3ff; }
+    .folder-btn.active {
+      background: #7c3aed;
+      color: #fff;
+      border-color: #7c3aed;
+    }
+    .folder-btn.active:hover { background: #6d28d9; }
+    .folder-btn:disabled { opacity: 0.5; cursor: not-allowed; }
     .settings-link {
       display: block;
       text-align: center;
@@ -75,7 +95,7 @@
   <div id="obsidian-section">
     <hr>
     <div class="section-title">Obsidian</div>
-    <button id="clip-btn" class="btn-obsidian">Clip to Obsidian</button>
+    <div id="folder-buttons"></div>
     <div class="status" id="clip-status"></div>
   </div>
 

@@ -15,6 +15,8 @@
       body { background: #1f2937; color: #f3f4f6; }
       input { background: #374151; color: #f3f4f6; border-color: #4b5563; }
       .hint { color: #9ca3af; }
+      .folder-row button { color: #9ca3af; }
+      .folder-row button:hover { color: #fca5a5; }
     }
     h2 { margin: 0 0 16px; font-size: 1.1rem; }
     h3 { margin: 20px 0 10px; font-size: 0.95rem; color: #7c3aed; }
@@ -53,7 +55,6 @@
       box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.2);
     }
     button {
-      width: 100%;
       padding: 10px;
       background: #2563eb;
       color: #fff;
@@ -73,6 +74,54 @@
       font-size: 0.75rem;
       color: #999;
       margin-top: 16px;
+    }
+    #save-btn {
+      width: 100%;
+      margin-top: 8px;
+    }
+    .folder-list {
+      margin-bottom: 14px;
+    }
+    .folder-row {
+      display: flex;
+      gap: 6px;
+      align-items: center;
+      margin-bottom: 6px;
+    }
+    .folder-row input {
+      flex: 1;
+      margin-bottom: 0;
+    }
+    .folder-row button {
+      padding: 6px 10px;
+      background: none;
+      color: #999;
+      border: 1px solid #e0e0e0;
+      border-radius: 6px;
+      font-size: 0.85rem;
+      line-height: 1;
+      min-width: 28px;
+    }
+    .folder-row button:hover {
+      background: #fee2e2;
+      color: #dc2626;
+      border-color: #fecaca;
+    }
+    .folder-row button:disabled {
+      opacity: 0.3;
+      cursor: not-allowed;
+    }
+    #add-folder-btn {
+      width: 100%;
+      background: none;
+      color: #7c3aed;
+      border: 1px dashed #c4b5fd;
+      font-size: 0.85rem;
+      padding: 8px;
+    }
+    #add-folder-btn:hover {
+      background: #f5f3ff;
+      border-color: #7c3aed;
     }
   </style>
 </head>
@@ -100,10 +149,11 @@
     <span class="hint">Optional. If empty, clips to the currently active vault.</span>
   </label>
   <label>
-    Folder path
-    <input type="text" id="obsidianFolder" placeholder="Readflow">
-    <span class="hint">Save articles under this folder within the vault. Default: Readflow</span>
+    Folder paths
+    <span class="hint">One folder per line. The last-used folder is highlighted by default.</span>
   </label>
+  <div class="folder-list" id="folder-list"></div>
+  <button id="add-folder-btn">+ Add folder</button>
 
   <button id="save-btn">Save</button>
   <div class="note">

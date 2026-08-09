@@ -150,10 +150,10 @@ curl -X POST https://your-domain.com/api/v1/delete \
 
 1. 右键扩展图标 → 选项，开启 Obsidian Clipping 并配置：
    - **Vault name**：可选，不填则写入当前活跃仓库
-   - **Folder path**：文章保存目录（默认 `Readflow`）
+   - **Folder paths**：支持多个目录（如 Readflow、Work、Personal），可增删。上次使用的目录高亮显示
 2. 确保 Obsidian 正在运行
-3. 在 readflow 文章详情页，右下角出现紫色剪藏按钮，点击即可保存
-4. 也可在扩展弹窗中点击「Clip to Obsidian」按钮
+3. 在 readflow 文章详情页，右下角出现所有目录的剪藏按钮，点击任一即可保存到对应目录
+4. 也可在扩展弹窗中点击对应目录按钮，上次使用的目录高亮显示
 
 笔记以 Markdown 格式保存，文件名格式为 `{日期} {标题}.md`，并包含 YAML frontmatter 元数据（标题、作者、来源、标签等）。
 

@@ -2,7 +2,7 @@ var infoEl = document.getElementById('page-info');
 var saveBtn = document.getElementById('save-btn');
 var saveStatusEl = document.getElementById('save-status');
 var obsidianSection = document.getElementById('obsidian-section');
-var clipBtn = document.getElementById('clip-btn');
+var folderButtonsEl = document.getElementById('folder-buttons');
 var clipStatusEl = document.getElementById('clip-status');
 
 var currentTab = null;
@@ -36,13 +36,96 @@ function checkObsidianSection() {
   if (!isReadflowArticlePage(currentTab && currentTab.url)) return;
 
   chrome.storage.sync.get(
-    { obsidianEnabled: false, obsidianVault: '' },
+    {
+      obsidianEnabled: false,
+      obsidianFolders: ['Readflow'],
+      obsidianLastFolder: 'Readflow'
+    },
     function (settings) {
-      if (settings.obsidianEnabled) {
-        obsidianSection.style.display = 'block';
+      if (!settings.obsidianEnabled) return;
+      obsidianSection.style.display = 'block';
+      renderFolderButtons(settings.obsidianFolders, settings.obsidianLastFolder);
+    }
+  );
+}
+
+function renderFolderButtons(folders, lastFolder) {
+  folderButtonsEl.innerHTML = '';
+  for (var i = 0; i < folders.length; i++) {
+    var btn = document.createElement('button');
+    btn.className = 'folder-btn';
+    btn.textContent = folders[i];
+    if (folders[i] === lastFolder) {
+      btn.classList.add('active');
+    }
+    btn.addEventListener('click', (function (folder) {
+      return function () { clipArticle(folder); };
+    })(folders[i]));
+    folderButtonsEl.appendChild(btn);
+  }
+}
+
+function clipArticle(folder) {
+  if (!currentTab) return;
+  var articleId = extractArticleId(currentTab.url);
+  if (!articleId) return;
+
+  var btns = folderButtonsEl.querySelectorAll('button');
+  for (var i = 0; i < btns.length; i++) {
+    btns[i].disabled = true;
+  }
+  clipStatusEl.textContent = 'Clipping to ' + folder + '...';
+  clipStatusEl.className = 'status';
+
+  chrome.runtime.sendMessage(
+    { action: 'clipToObsidian', articleId: articleId, folder: folder },
+    function (resp) {
+      for (var i = 0; i < btns.length; i++) {
+        btns[i].disabled = false;
+      }
+      if (chrome.runtime.lastError) {
+        clipStatusEl.textContent = chrome.runtime.lastError.message;
+        clipStatusEl.className = 'status status-err';
+        return;
+      }
+      if (resp && resp.success) {
+        if (resp.useClipboard) {
+          if (resp.obsidianUri) {
+            chrome.tabs.create({ url: resp.obsidianUri, active: false });
+          }
+          navigator.clipboard.writeText(resp.markdown).then(function () {
+            clipStatusEl.textContent = 'Note created, body copied — paste into Obsidian.';
+            clipStatusEl.className = 'status status-ok';
+          }).catch(function () {
+            clipStatusEl.textContent = 'Note created, but failed to copy body.';
+            clipStatusEl.className = 'status status-err';
+          });
+        } else if (resp.obsidianUri) {
+          chrome.tabs.create({ url: resp.obsidianUri, active: false });
+          clipStatusEl.textContent = 'Clipped to ' + folder + '!';
+          clipStatusEl.className = 'status status-ok';
+        } else {
+          clipStatusEl.textContent = 'Clipped to ' + folder + '!';
+          clipStatusEl.className = 'status status-ok';
+        }
+        updateActiveButton(folder);
+      } else {
+        clipStatusEl.textContent = (resp && resp.error) ? resp.error : 'Failed to clip.';
+        clipStatusEl.className = 'status status-err';
       }
     }
   );
+}
+
+function updateActiveButton(folder) {
+  var btns = folderButtonsEl.querySelectorAll('button');
+  for (var i = 0; i < btns.length; i++) {
+    if (btns[i].textContent === folder) {
+      btns[i].classList.add('active');
+    } else {
+      btns[i].classList.remove('active');
+    }
+  }
 }
 
 saveBtn.addEventListener('click', function () {
@@ -95,52 +178,6 @@ saveBtn.addEventListener('click', function () {
         saveBtn.disabled = false;
       });
   });
-});
-
-clipBtn.addEventListener('click', function () {
-  if (!currentTab) return;
-  var articleId = extractArticleId(currentTab.url);
-  if (!articleId) return;
-
-  clipBtn.disabled = true;
-  clipStatusEl.textContent = 'Clipping...';
-  clipStatusEl.className = 'status';
-
-  chrome.runtime.sendMessage(
-    { action: 'clipToObsidian', articleId: articleId },
-    function (resp) {
-      clipBtn.disabled = false;
-      if (chrome.runtime.lastError) {
-        clipStatusEl.textContent = chrome.runtime.lastError.message;
-        clipStatusEl.className = 'status status-err';
-        return;
-      }
-      if (resp && resp.success) {
-        if (resp.useClipboard) {
-          if (resp.obsidianUri) {
-            chrome.tabs.create({ url: resp.obsidianUri, active: false });
-          }
-          navigator.clipboard.writeText(resp.markdown).then(function () {
-            clipStatusEl.textContent = 'Note created, body copied — paste into Obsidian.';
-            clipStatusEl.className = 'status status-ok';
-          }).catch(function () {
-            clipStatusEl.textContent = 'Note created, but failed to copy body.';
-            clipStatusEl.className = 'status status-err';
-          });
-        } else if (resp.obsidianUri) {
-          chrome.tabs.create({ url: resp.obsidianUri, active: false });
-          clipStatusEl.textContent = 'Clipped to Obsidian!';
-          clipStatusEl.className = 'status status-ok';
-        } else {
-          clipStatusEl.textContent = 'Clipped to Obsidian!';
-          clipStatusEl.className = 'status status-ok';
-        }
-      } else {
-        clipStatusEl.textContent = (resp && resp.error) ? resp.error : 'Failed to clip.';
-        clipStatusEl.className = 'status status-err';
-      }
-    }
-  );
 });
 
 document.getElementById('open-options').addEventListener('click', function (e) {
