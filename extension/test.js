@@ -213,11 +213,9 @@ function simulateClip(article, vault, folder) {
   var fullUri = buildUri(vault, filePath, markdown);
 
   if (fullUri.length > 1500000) {
-    var liteMarkdown = formatArticleMarkdown(article, true);
-    var liteUri = buildUri(vault, filePath, liteMarkdown);
-    return { success: true, useClipboard: true, markdown: markdown, obsidianUri: liteUri };
+    return { success: true, useClipboard: true, markdown: markdown };
   }
-  return { success: true, obsidianUri: fullUri };
+  return { success: true };
 }
 
 function buildExpectedUri(vault, folder, article) {
@@ -242,10 +240,13 @@ var normalResp = simulateClip(normalArticle, 'MyVault', 'Readflow');
 assertEqual(normalResp.success, true, 'E2E normal: success is true');
 assertEqual(normalResp.useClipboard, undefined, 'E2E normal: no clipboard fallback');
 assertEqual(normalResp.markdown, undefined, 'E2E normal: no markdown in response');
-assert(normalResp.obsidianUri.startsWith('obsidian://new?'), 'E2E normal: obsidianUri returned');
-assert(normalResp.obsidianUri.includes('vault=MyVault'), 'E2E normal: vault in URI');
-assert(normalResp.obsidianUri.includes('file=Readflow/'), 'E2E normal: folder in file path');
-assert(normalResp.obsidianUri.includes('2024-06-01%20Normal%20Article.md'), 'E2E normal: date-prefixed filename');
+
+// E2E: URI content validation (simulates what background opens)
+var normalUri = buildExpectedUri('MyVault', 'Readflow', normalArticle);
+assert(normalUri.startsWith('obsidian://new?'), 'E2E URI: starts with obsidian scheme');
+assert(normalUri.includes('vault=MyVault'), 'E2E URI: vault present');
+assert(normalUri.includes('file=Readflow/'), 'E2E URI: folder in file path');
+assert(normalUri.includes('2024-06-01%20Normal%20Article.md'), 'E2E URI: date-prefixed filename');
 
 // E2E: No vault → omits vault param
 var noVaultUri = buildExpectedUri('', 'Readflow', normalArticle);
@@ -274,9 +275,6 @@ assertEqual(hugeResp.success, true, 'E2E huge: success is true');
 assertEqual(hugeResp.useClipboard, true, 'E2E huge: triggers clipboard fallback');
 assertEqual(typeof hugeResp.markdown, 'string', 'E2E huge: markdown returned for clipboard');
 assert(hugeResp.markdown.includes('Huge Article'), 'E2E huge: full markdown has heading');
-assert(typeof hugeResp.obsidianUri === 'string', 'E2E huge: lite obsidianUri returned');
-assert(hugeResp.obsidianUri.length < 1500000, 'E2E huge: lite URI under threshold');
-assert(!hugeResp.obsidianUri.includes('xxxxx'), 'E2E huge: lite URI has no body content');
 
 // E2E: Article without created_at → no date prefix
 var noDateArticle = {

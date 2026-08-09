@@ -53,31 +53,22 @@
     btnEl.classList.add('clipping');
     showToast('Clipping to ' + folder + '...');
 
-    var obsWindow = window.open('', '_blank');
-
     chrome.runtime.sendMessage(
       { action: 'clipToObsidian', articleId: articleId, folder: folder },
       function (resp) {
         btnEl.classList.remove('clipping');
         if (chrome.runtime.lastError) {
           showToast(chrome.runtime.lastError.message, true);
-          if (obsWindow) obsWindow.close();
           return;
         }
         if (resp && resp.success) {
           if (resp.useClipboard) {
-            if (resp.obsidianUri && obsWindow) {
-              obsWindow.location.href = resp.obsidianUri;
-            }
             navigator.clipboard.writeText(resp.markdown).then(function () {
               showToast('Note created, body copied — paste into Obsidian.', false);
             }).catch(function () {
               showToast('Note created, but failed to copy body to clipboard.', true);
             });
           } else {
-            if (resp.obsidianUri && obsWindow) {
-              obsWindow.location.href = resp.obsidianUri;
-            }
             showToast('Clipped to ' + folder + '!', false);
           }
           updateActiveButton(folder);
