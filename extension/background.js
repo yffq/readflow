@@ -108,12 +108,14 @@ async function clipToObsidian(articleId, folder) {
     if (fullUri.length > 1500000) {
       const liteMarkdown = formatArticleMarkdown(article, true);
       const liteUri = buildUri(settings.obsidianVault, filePath, liteMarkdown);
+      chrome.tabs.create({ url: liteUri, active: false });
       chrome.storage.sync.set({ obsidianLastFolder: folder });
-      return { success: true, useClipboard: true, markdown: markdown, obsidianUri: liteUri };
+      return { success: true, useClipboard: true, markdown: markdown };
     }
 
+    chrome.tabs.create({ url: fullUri, active: false });
     chrome.storage.sync.set({ obsidianLastFolder: folder });
-    return { success: true, obsidianUri: fullUri };
+    return { success: true };
   } catch (err) {
     return { success: false, error: err.message || 'Unknown error.' };
   }

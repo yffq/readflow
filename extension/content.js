@@ -63,17 +63,11 @@
         }
         if (resp && resp.success) {
           if (resp.useClipboard) {
-            if (resp.obsidianUri) {
-              window.open(resp.obsidianUri, '_blank');
-            }
             navigator.clipboard.writeText(resp.markdown).then(function () {
               showToast('Note created, body copied — paste into Obsidian.', false);
             }).catch(function () {
               showToast('Note created, but failed to copy body to clipboard.', true);
             });
-          } else if (resp.obsidianUri) {
-            window.open(resp.obsidianUri, '_blank');
-            showToast('Clipped to ' + folder + '!', false);
           } else {
             showToast('Clipped to ' + folder + '!', false);
           }
