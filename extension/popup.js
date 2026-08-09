@@ -90,6 +90,9 @@ function clipArticle(folder) {
       }
       if (resp && resp.success) {
         if (resp.useClipboard) {
+          if (resp.obsidianUri) {
+            chrome.tabs.create({ url: resp.obsidianUri, active: false });
+          }
           navigator.clipboard.writeText(resp.markdown).then(function () {
             clipStatusEl.textContent = 'Note created, body copied — paste into Obsidian.';
             clipStatusEl.className = 'status status-ok';
@@ -98,6 +101,9 @@ function clipArticle(folder) {
             clipStatusEl.className = 'status status-err';
           });
         } else {
+          if (resp.obsidianUri) {
+            chrome.tabs.create({ url: resp.obsidianUri, active: false });
+          }
           clipStatusEl.textContent = 'Clipped to ' + folder + '!';
           clipStatusEl.className = 'status status-ok';
         }

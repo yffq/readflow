@@ -61,13 +61,12 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.action === 'clipToObsidian') {
-    var senderTabId = (sender && sender.tab && sender.tab.id) || null;
-    clipToObsidian(message.articleId, message.folder, senderTabId).then(sendResponse);
+    clipToObsidian(message.articleId, message.folder).then(sendResponse);
     return true;
   }
 });
 
-async function clipToObsidian(articleId, folder, senderTabId) {
+async function clipToObsidian(articleId, folder) {
   try {
     const settings = await loadSettings();
     if (!settings.apiKey || !settings.serverUrl) {
@@ -109,14 +108,12 @@ async function clipToObsidian(articleId, folder, senderTabId) {
     if (fullUri.length > 1500000) {
       const liteMarkdown = formatArticleMarkdown(article, true);
       const liteUri = buildUri(settings.obsidianVault, filePath, liteMarkdown);
-      openObsidianUri(liteUri, senderTabId);
       chrome.storage.sync.set({ obsidianLastFolder: folder });
-      return { success: true, useClipboard: true, markdown: markdown };
+      return { success: true, useClipboard: true, markdown: markdown, obsidianUri: liteUri };
     }
 
-    openObsidianUri(fullUri, senderTabId);
     chrome.storage.sync.set({ obsidianLastFolder: folder });
-    return { success: true };
+    return { success: true, obsidianUri: fullUri };
   } catch (err) {
     return { success: false, error: err.message || 'Unknown error.' };
   }
@@ -175,20 +172,6 @@ function slug(s) {
 
 function encodePath(p) {
   return p.split('/').map(function (s) { return encodeURIComponent(s); }).join('/');
-}
-
-function openObsidianUri(uri, senderTabId) {
-  if (senderTabId) {
-    chrome.tabs.update(senderTabId, { url: uri });
-  } else {
-    chrome.tabs.query({ active: true }, function (tabs) {
-      if (tabs && tabs[0] && tabs[0].id) {
-        chrome.tabs.update(tabs[0].id, { url: uri });
-      } else {
-        chrome.tabs.create({ url: uri, active: false });
-      }
-    });
-  }
 }
 
 function buildUri(vault, filePath, content) {
