@@ -38,7 +38,7 @@ function checkObsidianSection() {
   chrome.storage.sync.get(
     { obsidianEnabled: false, obsidianVault: '' },
     function (settings) {
-      if (settings.obsidianEnabled && settings.obsidianVault) {
+      if (settings.obsidianEnabled) {
         obsidianSection.style.display = 'block';
       }
     }

@@ -72,7 +72,7 @@ async function clipToObsidian(articleId) {
     if (!settings.apiKey || !settings.serverUrl) {
       return { success: false, error: 'Readflow API not configured. Set Server URL and API Key in extension options.' };
     }
-    if (!settings.obsidianEnabled || !settings.obsidianVault) {
+    if (!settings.obsidianEnabled) {
       return { success: false, error: 'Obsidian clipping not configured. Enable it in extension options.' };
     }
 
@@ -102,10 +102,13 @@ async function clipToObsidian(articleId) {
     const folder = settings.obsidianFolder || 'Readflow';
     const filePath = folder.replace(/\/$/, '') + '/' + filename;
 
-    const vaultParam = 'vault=' + encodeURIComponent(settings.obsidianVault);
-    const fileParam = 'file=' + encodeURIComponent(filePath);
-    const contentParam = 'content=' + encodeURIComponent(markdown);
-    const uri = 'obsidian://new?' + vaultParam + '&' + fileParam + '&' + contentParam;
+    var params = [];
+    if (settings.obsidianVault) {
+      params.push('vault=' + encodeURIComponent(settings.obsidianVault));
+    }
+    params.push('file=' + encodeURIComponent(filePath));
+    params.push('content=' + encodeURIComponent(markdown));
+    const uri = 'obsidian://new?' + params.join('&');
 
     if (uri.length > 1500000) {
       return { success: true, useClipboard: true, markdown: markdown };

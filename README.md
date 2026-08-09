@@ -149,7 +149,7 @@ curl -X POST https://your-domain.com/api/v1/delete \
 无需安装任何 Obsidian 插件，使用原生 `obsidian://` URI 协议。
 
 1. 右键扩展图标 → 选项，开启 Obsidian Clipping 并配置：
-   - **Vault name**：你的 Obsidian 仓库名称（必须和 Obsidian 中命名完全一致）
+   - **Vault name**：可选，不填则写入当前活跃仓库
    - **Folder path**：文章保存目录（默认 `Readflow`）
 2. 确保 Obsidian 正在运行
 3. 在 readflow 文章详情页，右下角出现紫色剪藏按钮，点击即可保存

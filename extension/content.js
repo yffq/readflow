@@ -11,7 +11,7 @@
       obsidianFolder: 'Readflow',
     },
     function (settings) {
-      if (!settings.obsidianEnabled || !settings.obsidianVault) return;
+      if (!settings.obsidianEnabled) return;
       if (!settings.serverUrl) return;
 
       try {
