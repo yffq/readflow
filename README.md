@@ -144,6 +144,19 @@ curl -X POST https://your-domain.com/api/v1/delete \
 - 页面右键 → Save Page to Readflow
 - 链接右键 → Save Link to Readflow
 
+**剪藏到 Obsidian：**
+
+1. 在 Obsidian 中安装 [Local REST API](https://obsidian.md/plugins?id=obsidian-local-rest-api) 插件
+2. 确保 Obsidian 正在运行
+3. 右键扩展图标 → 选项，开启 Obsidian Clipping 并配置：
+   - **Vault name**：你的 Obsidian 仓库名称
+   - **Folder path**：保存目录（默认 `Readflow`）
+   - **API port**：REST API 端口（默认 `27124`）
+4. 在 readflow 文章详情页，右下角出现紫色剪藏按钮，点击即可保存
+5. 也可在扩展弹窗中点击「Clip to Obsidian」按钮
+
+笔记以 Markdown 格式保存，文件名格式为 `{日期} {标题}.md`，并包含 YAML frontmatter 元数据（标题、作者、来源、标签等）。
+
 ## 微信小程序
 
 在微信开发者工具中打开 `miniprogram/` 目录即可运行。
