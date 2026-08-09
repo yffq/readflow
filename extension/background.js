@@ -108,12 +108,12 @@ async function clipToObsidian(articleId, folder) {
     if (fullUri.length > 1500000) {
       const liteMarkdown = formatArticleMarkdown(article, true);
       const liteUri = buildUri(settings.obsidianVault, filePath, liteMarkdown);
-      chrome.tabs.create({ url: liteUri });
+      openObsidianTab(liteUri);
       chrome.storage.sync.set({ obsidianLastFolder: folder });
       return { success: true, useClipboard: true, markdown: markdown };
     }
 
-    chrome.tabs.create({ url: fullUri });
+    openObsidianTab(fullUri);
     chrome.storage.sync.set({ obsidianLastFolder: folder });
     return { success: true };
   } catch (err) {
@@ -174,6 +174,12 @@ function slug(s) {
 
 function encodePath(p) {
   return p.split('/').map(function (s) { return encodeURIComponent(s); }).join('/');
+}
+
+function openObsidianTab(uri) {
+  chrome.tabs.create({ url: 'about:blank', active: false }, function (tab) {
+    chrome.tabs.update(tab.id, { url: uri });
+  });
 }
 
 function buildUri(vault, filePath, content) {
