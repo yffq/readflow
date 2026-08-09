@@ -117,11 +117,14 @@ clipBtn.addEventListener('click', function () {
       }
       if (resp && resp.success) {
         if (resp.useClipboard) {
+          if (resp.obsidianUri) {
+            chrome.tabs.create({ url: resp.obsidianUri, active: false });
+          }
           navigator.clipboard.writeText(resp.markdown).then(function () {
-            clipStatusEl.textContent = 'Article too long for URI. Copied to clipboard.';
+            clipStatusEl.textContent = 'Note created, body copied — paste into Obsidian.';
             clipStatusEl.className = 'status status-ok';
           }).catch(function () {
-            clipStatusEl.textContent = 'Failed to copy to clipboard.';
+            clipStatusEl.textContent = 'Note created, but failed to copy body.';
             clipStatusEl.className = 'status status-err';
           });
         } else if (resp.obsidianUri) {

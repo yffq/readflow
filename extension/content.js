@@ -49,10 +49,13 @@
           }
           if (resp && resp.success) {
             if (resp.useClipboard) {
+              if (resp.obsidianUri) {
+                window.open(resp.obsidianUri, '_blank');
+              }
               navigator.clipboard.writeText(resp.markdown).then(function () {
-                showToast('Article too long for URI. Copied to clipboard — paste into Obsidian.', false);
+                showToast('Article too long for URI. Note created, body copied — paste into Obsidian.', false);
               }).catch(function () {
-                showToast('Failed to copy to clipboard.', true);
+                showToast('Note created, but failed to copy body to clipboard.', true);
               });
             } else if (resp.obsidianUri) {
               window.open(resp.obsidianUri, '_blank');

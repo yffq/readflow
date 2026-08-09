@@ -102,25 +102,22 @@ async function clipToObsidian(articleId) {
     const folder = settings.obsidianFolder || 'Readflow';
     const filePath = folder.replace(/\/$/, '') + '/' + filename;
 
-    var params = [];
-    if (settings.obsidianVault) {
-      params.push('vault=' + encodeURIComponent(settings.obsidianVault));
-    }
-    params.push('file=' + encodePath(filePath));
-    params.push('content=' + encodeURIComponent(markdown));
-    const uri = 'obsidian://new?' + params.join('&');
+    const fullUri = buildUri(settings.obsidianVault, filePath, markdown);
 
-    if (uri.length > 1500000) {
-      return { success: true, useClipboard: true, markdown: markdown };
+    if (fullUri.length > 1500000) {
+      const liteMarkdown = formatArticleMarkdown(article, true);
+      const liteUri = buildUri(settings.obsidianVault, filePath, liteMarkdown);
+      return { success: true, useClipboard: true, markdown: markdown, obsidianUri: liteUri };
     }
 
-    return { success: true, obsidianUri: uri };
+    return { success: true, obsidianUri: fullUri };
   } catch (err) {
     return { success: false, error: err.message || 'Unknown error.' };
   }
 }
 
-function formatArticleMarkdown(article) {
+function formatArticleMarkdown(article, lite) {
+  lite = lite || false;
   const lines = [];
   lines.push('---');
   pushField('title', article.title || 'Untitled');
@@ -140,7 +137,9 @@ function formatArticleMarkdown(article) {
   lines.push('# ' + (article.title || 'Untitled'));
   lines.push('');
 
-  if (article.content_markdown) {
+  if (lite) {
+    lines.push('<!-- Paste full content here (Cmd+V / Ctrl+V) -->');
+  } else if (article.content_markdown) {
     lines.push(article.content_markdown);
   }
 
@@ -170,6 +169,16 @@ function slug(s) {
 
 function encodePath(p) {
   return p.split('/').map(function (s) { return encodeURIComponent(s); }).join('/');
+}
+
+function buildUri(vault, filePath, content) {
+  var params = [];
+  if (vault) {
+    params.push('vault=' + encodeURIComponent(vault));
+  }
+  params.push('file=' + encodePath(filePath));
+  params.push('content=' + encodeURIComponent(content));
+  return 'obsidian://new?' + params.join('&');
 }
 
 function loadSettings() {
