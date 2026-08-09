@@ -529,6 +529,41 @@ func TestReadArticleAPI(t *testing.T) {
 	if !strings.Contains(resp.ContentHTML, "mini program") {
 		t.Fatal("response should include content_html")
 	}
+	if resp.ContentMarkdown == "" {
+		t.Fatal("response should include content_markdown")
+	}
+	if resp.ExtractionFailed {
+		t.Fatal("extraction_failed should be false for valid article")
+	}
+
+	// Article with extraction failure
+	af := testArticle("api-read-fail", "Failed Extraction", "url", time.Now())
+	af.ExtractionFailed = true
+	af.ContentHTML = ""
+	af.ContentMD = ""
+	h.Store.CreateArticle(af)
+
+	req = httptest.NewRequest("GET", "/api/v1/article/api-read-fail", nil)
+	req.SetPathValue("id", "api-read-fail")
+	rec = httptest.NewRecorder()
+	h.APIReadArticle(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("failed extraction article API: expected 200, got %d", rec.Code)
+	}
+	var respFail model.ArticleExport
+	if err := json.Unmarshal(rec.Body.Bytes(), &respFail); err != nil {
+		t.Fatalf("parse failed extraction response: %v", err)
+	}
+	if !respFail.ExtractionFailed {
+		t.Fatal("extraction_failed should be true")
+	}
+	if respFail.ContentHTML != "" {
+		t.Fatal("content_html should be empty for extraction failure")
+	}
+	if respFail.ContentMarkdown != "" {
+		t.Fatal("content_markdown should be empty for extraction failure")
+	}
 
 	req = httptest.NewRequest("GET", "/api/v1/article/missing", nil)
 	req.SetPathValue("id", "missing")
