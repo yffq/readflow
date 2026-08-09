@@ -116,8 +116,18 @@ clipBtn.addEventListener('click', function () {
         return;
       }
       if (resp && resp.success) {
-        clipStatusEl.textContent = 'Clipped to Obsidian!';
-        clipStatusEl.className = 'status status-ok';
+        if (resp.useClipboard) {
+          navigator.clipboard.writeText(resp.markdown).then(function () {
+            clipStatusEl.textContent = 'Article too long for URI. Copied to clipboard.';
+            clipStatusEl.className = 'status status-ok';
+          }).catch(function () {
+            clipStatusEl.textContent = 'Failed to copy to clipboard.';
+            clipStatusEl.className = 'status status-err';
+          });
+        } else {
+          clipStatusEl.textContent = 'Clipped to Obsidian!';
+          clipStatusEl.className = 'status status-ok';
+        }
       } else {
         clipStatusEl.textContent = (resp && resp.error) ? resp.error : 'Failed to clip.';
         clipStatusEl.className = 'status status-err';

@@ -9,7 +9,6 @@
       obsidianEnabled: false,
       obsidianVault: '',
       obsidianFolder: 'Readflow',
-      obsidianPort: 27124,
     },
     function (settings) {
       if (!settings.obsidianEnabled || !settings.obsidianVault) return;
@@ -49,7 +48,15 @@
             return;
           }
           if (resp && resp.success) {
-            showToast('Clipped to Obsidian!', false);
+            if (resp.useClipboard) {
+              navigator.clipboard.writeText(resp.markdown).then(function () {
+                showToast('Article too long for URI. Copied to clipboard — paste into Obsidian.', false);
+              }).catch(function () {
+                showToast('Failed to copy to clipboard.', true);
+              });
+            } else {
+              showToast('Clipped to Obsidian!', false);
+            }
           } else {
             showToast(resp && resp.error ? resp.error : 'Failed to clip', true);
             btn.classList.add('error');

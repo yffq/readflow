@@ -97,22 +97,17 @@
   <label>
     Vault name
     <input type="text" id="obsidianVault" placeholder="MyVault">
-    <span class="hint">The name of your Obsidian vault.</span>
+    <span class="hint">Must match your Obsidian vault name exactly.</span>
   </label>
   <label>
     Folder path
     <input type="text" id="obsidianFolder" placeholder="Readflow">
     <span class="hint">Save articles under this folder within the vault. Default: Readflow</span>
   </label>
-  <label>
-    API port
-    <input type="number" id="obsidianPort" placeholder="27124">
-    <span class="hint">Port of the Local REST API plugin. Default: 27124</span>
-  </label>
 
   <button id="save-btn">Save</button>
   <div class="note">
-    Obsidian clipping requires the <a href="https://obsidian.md/plugins?id=obsidian-local-rest-api" target="_blank" rel="noopener noreferrer">Local REST API</a> plugin installed in Obsidian.
+    No Obsidian plugin required. Uses the built-in obsidian:// URI scheme.
   </div>
 
   <script src="options.js"></script>

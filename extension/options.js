@@ -3,7 +3,6 @@ const apiKeyInput = document.getElementById('apiKey');
 const obsidianEnabledCheckbox = document.getElementById('obsidianEnabled');
 const obsidianVaultInput = document.getElementById('obsidianVault');
 const obsidianFolderInput = document.getElementById('obsidianFolder');
-const obsidianPortInput = document.getElementById('obsidianPort');
 const saveBtn = document.getElementById('save-btn');
 
 chrome.storage.sync.get({
@@ -11,15 +10,13 @@ chrome.storage.sync.get({
   serverUrl: '',
   obsidianEnabled: false,
   obsidianVault: '',
-  obsidianFolder: 'Readflow',
-  obsidianPort: 27124
+  obsidianFolder: 'Readflow'
 }, (settings) => {
   serverUrlInput.value = settings.serverUrl;
   apiKeyInput.value = settings.apiKey;
   obsidianEnabledCheckbox.checked = settings.obsidianEnabled;
   obsidianVaultInput.value = settings.obsidianVault;
   obsidianFolderInput.value = settings.obsidianFolder;
-  obsidianPortInput.value = settings.obsidianPort;
 });
 
 saveBtn.addEventListener('click', () => {
@@ -28,8 +25,7 @@ saveBtn.addEventListener('click', () => {
     apiKey: apiKeyInput.value.trim(),
     obsidianEnabled: obsidianEnabledCheckbox.checked,
     obsidianVault: obsidianVaultInput.value.trim(),
-    obsidianFolder: obsidianFolderInput.value.trim() || 'Readflow',
-    obsidianPort: parseInt(obsidianPortInput.value, 10) || 27124
+    obsidianFolder: obsidianFolderInput.value.trim() || 'Readflow'
   }, () => {
     saveBtn.textContent = 'Saved!';
     setTimeout(() => { saveBtn.textContent = 'Save'; }, 1500);

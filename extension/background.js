@@ -99,24 +99,19 @@ async function clipToObsidian(articleId) {
     const markdown = formatArticleMarkdown(article);
     const datePrefix = article.created_at ? article.created_at.slice(0, 10) : '';
     const filename = (datePrefix ? datePrefix + ' ' : '') + sanitizeFilename(article.title) + '.md';
-    const url = buildObsidianUrl(
-      settings.obsidianVault,
-      settings.obsidianFolder || 'Readflow',
-      filename,
-      settings.obsidianPort || 27124
-    );
+    const folder = settings.obsidianFolder || 'Readflow';
+    const filePath = folder.replace(/\/$/, '') + '/' + filename;
 
-    const obsResp = await fetch(url, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'text/markdown' },
-      body: markdown
-    });
-    if (!obsResp.ok) {
-      if (obsResp.status === 0) {
-        return { success: false, error: 'Cannot connect to Obsidian. Ensure the Local REST API plugin is installed and Obsidian is running.' };
-      }
-      return { success: false, error: 'Obsidian returned HTTP ' + obsResp.status + '.' };
+    const vaultParam = 'vault=' + encodeURIComponent(settings.obsidianVault);
+    const fileParam = 'file=' + encodeURIComponent(filePath);
+    const contentParam = 'content=' + encodeURIComponent(markdown);
+    const uri = 'obsidian://new?' + vaultParam + '&' + fileParam + '&' + contentParam;
+
+    if (uri.length > 1500000) {
+      return { success: true, useClipboard: true, markdown: markdown };
     }
+
+    await chrome.tabs.create({ url: uri, active: false });
 
     return { success: true };
   } catch (err) {
@@ -172,21 +167,12 @@ function slug(s) {
   return s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
 }
 
-function buildObsidianUrl(vault, folder, filename, port) {
-  var vaultEnc = encodeURIComponent(vault);
-  var segments = folder.split('/').filter(Boolean).map(function (s) { return encodeURIComponent(s); });
-  var fileEnc = encodeURIComponent(filename);
-  var path = segments.concat(fileEnc).join('/');
-  return 'http://localhost:' + port + '/vault/' + vaultEnc + '/' + path;
-}
-
 function loadSettings() {
   return chrome.storage.sync.get({
     apiKey: '',
     serverUrl: '',
     obsidianEnabled: false,
     obsidianVault: '',
-    obsidianFolder: 'Readflow',
-    obsidianPort: 27124
+    obsidianFolder: 'Readflow'
   });
 }
