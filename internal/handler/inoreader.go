@@ -6,11 +6,13 @@ import (
 	"net/http"
 	"strings"
 	"time"
+	"unicode/utf8"
 
 	md "github.com/JohannesKaufmann/html-to-markdown"
 	"github.com/readflow/readflow/internal/extract"
 	"github.com/readflow/readflow/internal/model"
 	"github.com/readflow/readflow/internal/sanitize"
+	"golang.org/x/net/html"
 )
 
 type inoreaderWebhook struct {
@@ -107,7 +109,7 @@ func (h *Handler) saveInoreaderItem(item inoreaderItem) inoreaderResult {
 		return result
 	}
 
-	title := strings.TrimSpace(item.Title)
+	title := inoreaderTitle(item.Title, content)
 	if title == "" {
 		title = "Saved from Inoreader"
 	}
@@ -135,6 +137,71 @@ func (h *Handler) saveInoreaderItem(item inoreaderItem) inoreaderResult {
 	result.ID = article.ID
 	result.Status = "created"
 	return result
+}
+
+func inoreaderTitle(rawTitle, content string) string {
+	title := htmlText(rawTitle)
+	contentText := htmlText(content)
+	if utf8.RuneCountInString(title) <= 200 && title != contentText {
+		return title
+	}
+	if heading := firstHTMLHeading(content); heading != "" {
+		return truncateRunes(heading, 200)
+	}
+	return truncateRunes(title, 200)
+}
+
+func firstHTMLHeading(value string) string {
+	root, err := html.Parse(strings.NewReader(value))
+	if err != nil {
+		return ""
+	}
+	var find func(*html.Node) string
+	find = func(node *html.Node) string {
+		if node.Type == html.ElementNode && (node.Data == "h1" || node.Data == "h2") {
+			return strings.Join(strings.Fields(nodeText(node)), " ")
+		}
+		for child := node.FirstChild; child != nil; child = child.NextSibling {
+			if heading := find(child); heading != "" {
+				return heading
+			}
+		}
+		return ""
+	}
+	return find(root)
+}
+
+func htmlText(value string) string {
+	root, err := html.Parse(strings.NewReader(value))
+	if err != nil {
+		return strings.Join(strings.Fields(value), " ")
+	}
+	return strings.Join(strings.Fields(nodeText(root)), " ")
+}
+
+func nodeText(node *html.Node) string {
+	var text strings.Builder
+	var walk func(*html.Node)
+	walk = func(current *html.Node) {
+		if current.Type == html.TextNode {
+			text.WriteString(current.Data)
+			text.WriteByte(' ')
+		}
+		for child := current.FirstChild; child != nil; child = child.NextSibling {
+			walk(child)
+		}
+	}
+	walk(node)
+	return text.String()
+}
+
+func truncateRunes(value string, limit int) string {
+	value = strings.TrimSpace(value)
+	if utf8.RuneCountInString(value) <= limit {
+		return value
+	}
+	runes := []rune(value)
+	return strings.TrimSpace(string(runes[:limit])) + "..."
 }
 
 func firstInoreaderURL(item inoreaderItem) string {

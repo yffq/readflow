@@ -10,6 +10,7 @@ require (
 	github.com/go-shiori/go-readability v0.0.0-20251205110129-5db1dc9836f0
 	github.com/microcosm-cc/bluemonday v1.0.27
 	golang.org/x/crypto v0.33.0
+	golang.org/x/net v0.35.0
 	golang.org/x/time v0.8.0
 	modernc.org/sqlite v1.29.0
 )
@@ -28,7 +29,6 @@ require (
 	github.com/mattn/go-isatty v0.0.16 // indirect
 	github.com/ncruces/go-strftime v0.1.9 // indirect
 	github.com/remyoudompheng/bigfft v0.0.0-20230129092748-24d4a6f8daec // indirect
-	golang.org/x/net v0.35.0 // indirect
 	golang.org/x/sys v0.30.0 // indirect
 	golang.org/x/text v0.22.0 // indirect
 	modernc.org/gc/v3 v3.0.0-20240107210532-573471604cb6 // indirect

@@ -91,6 +91,33 @@ func TestInoreaderWebhookBoundaries(t *testing.T) {
 	}
 }
 
+func TestInoreaderTitle(t *testing.T) {
+	longBody := strings.Repeat("Full article body ", 30)
+	tests := []struct {
+		name    string
+		title   string
+		content string
+		want    string
+	}{
+		{name: "normal", title: "Normal title", content: "<p>Body</p>", want: "Normal title"},
+		{name: "html", title: "<strong>HTML title</strong>", content: "<p>Body</p>", want: "HTML title"},
+		{name: "full text", title: longBody, content: "<h1>Actual Article Title</h1><p>" + longBody + "</p>", want: "Actual Article Title"},
+		{name: "same as content", title: "Entire short body", content: "<h2>Recovered title</h2><p>Entire short body</p>", want: "Entire short body"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := inoreaderTitle(tt.title, tt.content); got != tt.want {
+				t.Fatalf("expected %q, got %q", tt.want, got)
+			}
+		})
+	}
+
+	got := inoreaderTitle(strings.Repeat("长标题", 100), "<p>No heading</p>")
+	if len([]rune(strings.TrimSuffix(got, "..."))) != 200 || !strings.HasSuffix(got, "...") {
+		t.Fatalf("expected rune-safe truncated title, got %q", got)
+	}
+}
+
 func callInoreaderWebhook(t *testing.T, h *Handler, body []byte, wantStatus int) map[string]any {
 	t.Helper()
 	req := httptest.NewRequest("POST", "/api/v1/webhooks/inoreader", bytes.NewReader(body))
