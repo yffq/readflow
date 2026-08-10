@@ -14,6 +14,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/readflow/readflow/internal/middleware"
 	"github.com/readflow/readflow/internal/model"
 )
 
@@ -203,6 +204,63 @@ func TestServerIntegration(t *testing.T) {
 		resp.Body.Close()
 		if webhookResponse.Created != 0 || webhookResponse.Duplicates != 1 || webhookResponse.Failed != 0 {
 			t.Fatalf("unexpected duplicate webhook response: %+v", webhookResponse)
+		}
+	})
+
+	t.Run("InoreaderWebhook_ScopedToken", func(t *testing.T) {
+		client := newClient()
+		body := strings.NewReader("{\"items\":[{\"title\":\"Rejected\",\"summary\":{\"content\":\"<p>Body</p>\"}}]}")
+		resp := doRequest(t, client, ts.URL+"/hooks/inoreader/wh_invalid", "POST", map[string]string{
+			"Content-Type": "application/json",
+		}, body)
+		if resp.StatusCode != http.StatusUnauthorized {
+			t.Fatalf("invalid webhook token: expected 401, got %d", resp.StatusCode)
+		}
+		resp.Body.Close()
+
+		userExists, err := srv.store.UserExists()
+		if err != nil {
+			t.Fatalf("check test user: %v", err)
+		}
+		if !userExists {
+			if _, err := srv.store.CreateUser("webhook-token-test-password"); err != nil {
+				t.Fatalf("create webhook token test user: %v", err)
+			}
+		}
+
+		rawToken, tokenHash, err := middleware.GenerateWebhookToken()
+		if err != nil {
+			t.Fatalf("generate webhook token: %v", err)
+		}
+		if err := srv.store.CreateWebhookToken("default", rawToken[:11], tokenHash, "Inoreader E2E"); err != nil {
+			t.Fatalf("create webhook token: %v", err)
+		}
+
+		body = strings.NewReader("{\"items\":[{\"title\":\"Scoped Webhook\",\"canonical\":[{\"href\":\"https://example.com/scoped-webhook\"}],\"summary\":{\"content\":\"<p>Scoped body</p>\"}}]}")
+		resp = doRequest(t, client, ts.URL+"/hooks/inoreader/"+url.PathEscape(rawToken), "POST", map[string]string{
+			"Content-Type": "application/json",
+		}, body)
+		if resp.StatusCode != http.StatusOK {
+			responseBody, readErr := io.ReadAll(resp.Body)
+			if readErr != nil {
+				t.Fatalf("read scoped webhook response: %v", readErr)
+			}
+			t.Fatalf("scoped webhook: expected 200, got %d: %s", resp.StatusCode, responseBody)
+		}
+		resp.Body.Close()
+
+		resp = doRequest(t, client, ts.URL+"/api/v1/export?api_key="+url.QueryEscape(rawToken), "GET", nil, nil)
+		if resp.StatusCode != http.StatusUnauthorized {
+			t.Fatalf("webhook token must not access export API, got %d", resp.StatusCode)
+		}
+		resp.Body.Close()
+
+		tokens, err := srv.store.ListWebhookTokens("default")
+		if err != nil {
+			t.Fatalf("list webhook tokens: %v", err)
+		}
+		if len(tokens) != 1 || !tokens[0].LastUsed.Valid {
+			t.Fatalf("expected webhook token last-used timestamp, got %+v", tokens)
 		}
 	})
 }

@@ -67,6 +67,27 @@ func APIKeyAuth(s *store.Store) func(http.Handler) http.Handler {
 	}
 }
 
+func WebhookTokenAuth(s *store.Store) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			token, _ := r.Context().Value(contextAPIKey).(string)
+			if !strings.HasPrefix(token, "wh_") {
+				writeAuthError(w, "unauthorized")
+				return
+			}
+			if err := s.ValidateWebhookToken(token); err != nil {
+				writeAuthError(w, "invalid webhook token")
+				return
+			}
+			next.ServeHTTP(w, r)
+		})
+	}
+}
+
+func writeAuthError(w http.ResponseWriter, message string) {
+	http.Error(w, message, http.StatusUnauthorized)
+}
+
 func APIKeyFromRequest(r *http.Request) string {
 	auth := strings.TrimSpace(r.Header.Get("Authorization"))
 	if auth == "" {
@@ -97,6 +118,15 @@ func RedactAPIKeyQuery(next http.Handler) http.Handler {
 			if pathKey != "" && !strings.Contains(pathKey, "/") {
 				key = pathKey
 				r.URL.Path = strings.TrimSuffix(inoreaderPrefix, "/")
+				r.URL.RawPath = ""
+			}
+		}
+		const scopedWebhookPrefix = "/hooks/inoreader/"
+		if strings.HasPrefix(r.URL.Path, scopedWebhookPrefix) {
+			pathToken := strings.TrimSpace(strings.TrimPrefix(r.URL.Path, scopedWebhookPrefix))
+			if pathToken != "" && !strings.Contains(pathToken, "/") {
+				key = pathToken
+				r.URL.Path = strings.TrimSuffix(scopedWebhookPrefix, "/")
 				r.URL.RawPath = ""
 			}
 		}

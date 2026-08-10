@@ -283,11 +283,23 @@ func (h *Handler) SaveLink(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) SettingsPage(w http.ResponseWriter, r *http.Request) {
 	userID := h.getSessionString(r.Context(), "user_id")
-	keys, _ := h.Store.ListAPIKeys(userID)
+	keys, err := h.Store.ListAPIKeys(userID)
+	if err != nil {
+		http.Error(w, "failed to list API keys", http.StatusInternalServerError)
+		return
+	}
+	webhookTokens, err := h.Store.ListWebhookTokens(userID)
+	if err != nil {
+		http.Error(w, "failed to list webhook tokens", http.StatusInternalServerError)
+		return
+	}
 	newKey := h.getSessionString(r.Context(), "new_api_key")
+	newWebhookToken := h.getSessionString(r.Context(), "new_webhook_token")
 	h.render(w, r, "page_settings", map[string]any{
-		"APIKeys":   keys,
-		"NewAPIKey": newKey,
+		"APIKeys":         keys,
+		"NewAPIKey":       newKey,
+		"WebhookTokens":   webhookTokens,
+		"NewWebhookToken": newWebhookToken,
 	})
 }
 
@@ -317,6 +329,44 @@ func (h *Handler) DeleteAPIKey(w http.ResponseWriter, r *http.Request) {
 	userID := h.getSessionString(r.Context(), "user_id")
 	keyID := r.PathValue("id")
 	h.Store.DeleteAPIKey(userID, keyID)
+	http.Redirect(w, r, "/settings", http.StatusSeeOther)
+}
+
+func (h *Handler) GenerateWebhookToken(w http.ResponseWriter, r *http.Request) {
+	if !h.validateFormCSRF(w, r) {
+		return
+	}
+	userID := h.getSessionString(r.Context(), "user_id")
+	name := strings.TrimSpace(r.FormValue("name"))
+	if name == "" {
+		name = "Inoreader"
+	}
+	rawToken, tokenHash, err := middleware.GenerateWebhookToken()
+	if err != nil {
+		http.Error(w, "failed to generate webhook token", http.StatusInternalServerError)
+		return
+	}
+	if err := h.Store.CreateWebhookToken(userID, rawToken[:11], tokenHash, name); err != nil {
+		http.Error(w, "failed to create webhook token", http.StatusInternalServerError)
+		return
+	}
+	h.SM.Put(r.Context(), "new_webhook_token", rawToken)
+	if _, _, err := h.SM.Commit(r.Context()); err != nil {
+		http.Error(w, "failed to store webhook token", http.StatusInternalServerError)
+		return
+	}
+	http.Redirect(w, r, "/settings", http.StatusSeeOther)
+}
+
+func (h *Handler) DeleteWebhookToken(w http.ResponseWriter, r *http.Request) {
+	if !h.validateFormCSRF(w, r) {
+		return
+	}
+	userID := h.getSessionString(r.Context(), "user_id")
+	if err := h.Store.DeleteWebhookToken(userID, r.PathValue("id")); err != nil {
+		http.Error(w, "failed to delete webhook token", http.StatusInternalServerError)
+		return
+	}
 	http.Redirect(w, r, "/settings", http.StatusSeeOther)
 }
 

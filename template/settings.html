@@ -10,6 +10,15 @@
         <p class="help-text">Click the key to copy it.</p>
     </div>
     {{end}}
+    {{if .NewWebhookToken}}
+    <div class="api-key-reveal">
+        <h3>New Inoreader Webhook Token Created</h3>
+        <p>Copy this token now. You won't be able to see it again.</p>
+        <code class="key-display" onclick="copyKey(this)">{{.NewWebhookToken}}</code>
+        <p class="help-text">Webhook URL: <code>https://your-domain.com/hooks/inoreader/{{.NewWebhookToken}}</code></p>
+        <p class="help-text">This token can only add articles through the Inoreader webhook.</p>
+    </div>
+    {{end}}
     <div class="settings-section">
         <h2>API Keys</h2>
         <p class="help-text">API keys allow external tools (Chrome extension, Hermes agent) to access Readflow.</p>
@@ -30,6 +39,36 @@
                     <td>{{if .LastUsed.Valid}}{{.LastUsed.Time.Format "Jan 02, 2006"}}{{else}}Never{{end}}</td>
                     <td>
                         <form method="POST" action="/delete-key/{{.ID}}" class="inline" onsubmit="return confirm('Delete this key?')">
+                            <input type="hidden" name="csrf_token" value="{{$.CSRFToken}}">
+                            <button class="btn-sm btn-danger">Delete</button>
+                        </form>
+                    </td>
+                </tr>
+                {{end}}
+            </tbody>
+        </table>
+        {{end}}
+    </div>
+    <div class="settings-section">
+        <h2>Inoreader Webhook Tokens</h2>
+        <p class="help-text">These limited tokens can only add articles from Inoreader. They cannot read, export, or delete data.</p>
+        <form method="POST" action="/generate-webhook-token" class="key-form">
+            <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+            <input type="text" name="name" placeholder="Token name (e.g., Inoreader)" required>
+            <button type="submit" class="btn-primary">Generate Webhook Token</button>
+        </form>
+        {{if .WebhookTokens}}
+        <table class="key-table">
+            <thead><tr><th>Name</th><th>Prefix</th><th>Created</th><th>Last Used</th><th></th></tr></thead>
+            <tbody>
+                {{range .WebhookTokens}}
+                <tr>
+                    <td>{{.Name}}</td>
+                    <td><code>{{.TokenPrefix}}...</code></td>
+                    <td>{{.CreatedAt}}</td>
+                    <td>{{if .LastUsed.Valid}}{{.LastUsed.Time.Format "Jan 02, 2006"}}{{else}}Never{{end}}</td>
+                    <td>
+                        <form method="POST" action="/delete-webhook-token/{{.ID}}" class="inline" onsubmit="return confirm('Delete this webhook token?')">
                             <input type="hidden" name="csrf_token" value="{{$.CSRFToken}}">
                             <button class="btn-sm btn-danger">Delete</button>
                         </form>

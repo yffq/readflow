@@ -34,6 +34,19 @@ func TestGenerateAPIKey(t *testing.T) {
 	}
 }
 
+func TestGenerateWebhookToken(t *testing.T) {
+	rawToken, tokenHash, err := GenerateWebhookToken()
+	if err != nil {
+		t.Fatalf("generate webhook token: %v", err)
+	}
+	if !strings.HasPrefix(rawToken, "wh_") || len(rawToken) != 67 {
+		t.Fatalf("unexpected webhook token format: %q", rawToken)
+	}
+	if len(tokenHash) != 64 || strings.Contains(tokenHash, rawToken) {
+		t.Fatal("unexpected webhook token hash")
+	}
+}
+
 func TestSecureHeaders(t *testing.T) {
 	handler := SecureHeaders(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte("ok"))
@@ -176,6 +189,25 @@ func TestRedactInoreaderPathAPIKey(t *testing.T) {
 		}
 		if APIKeyFromRequest(r) != "rf_secret" {
 			t.Fatal("path API key was not available to authentication")
+		}
+		w.WriteHeader(http.StatusNoContent)
+	}))
+	handler.ServeHTTP(rec, req)
+	if rec.Code != http.StatusNoContent {
+		t.Fatalf("expected 204, got %d", rec.Code)
+	}
+}
+
+func TestRedactScopedWebhookToken(t *testing.T) {
+	req := httptest.NewRequest("POST", "/hooks/inoreader/wh_secret", nil)
+	rec := httptest.NewRecorder()
+	handler := RedactAPIKeyQuery(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/hooks/inoreader" || strings.Contains(r.RequestURI, "wh_secret") {
+			t.Fatalf("webhook token was not redacted: %s", r.RequestURI)
+		}
+		token, _ := r.Context().Value(contextAPIKey).(string)
+		if token != "wh_secret" {
+			t.Fatal("redacted webhook token was not available to authentication")
 		}
 		w.WriteHeader(http.StatusNoContent)
 	}))

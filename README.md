@@ -135,15 +135,15 @@ curl -X POST https://your-domain.com/api/v1/delete \
 在 Inoreader 的 Automation Rule 中添加 **Trigger webhook**，Webhook URL 填写：
 
 ```text
-https://your-domain.com/api/v1/webhooks/inoreader/YOUR_API_KEY
+https://your-domain.com/hooks/inoreader/YOUR_WEBHOOK_TOKEN
 ```
 
 建议规则使用“文章被添加指定标签”作为触发条件。Readflow 会直接保存 Inoreader
 发送的 HTML 正文，并保留标题、作者、Feed 名称和原文链接。重复的原文链接不会再次保存。
 
-其中 `YOUR_API_KEY` 是完整的 `rf_...` Key，不要添加 `Bearer`。Webhook URL 包含
-API Key，只能通过 HTTPS 使用。建议为 Inoreader 单独创建一个 API Key，
-便于独立撤销和轮换。
+先在 Readflow Settings 的 **Inoreader Webhook Tokens** 中创建 token。其中
+`YOUR_WEBHOOK_TOKEN` 是完整的 `wh_...` token。该 token 只能通过 Inoreader
+Webhook 添加文章，不能读取、导出或删除数据。Webhook URL 只能通过 HTTPS 使用。
 
 ## 浏览器扩展
 

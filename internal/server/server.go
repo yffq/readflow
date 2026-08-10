@@ -88,10 +88,17 @@ func New(dbPath string) (*Server, error) {
 			r.Post("/save-link", h.SaveLink)
 			r.Post("/generate-key", h.GenerateAPIKey)
 			r.Post("/delete-key/{id}", h.DeleteAPIKey)
+			r.Post("/generate-webhook-token", h.GenerateWebhookToken)
+			r.Post("/delete-webhook-token/{id}", h.DeleteWebhookToken)
 			r.Post("/delete/{id}", h.DeleteArticle)
 			r.Post("/delete-batch", h.DeleteArticles)
 		})
 	})
+
+	r.With(
+		middleware.PerIPRateLimit(10, 20),
+		middleware.WebhookTokenAuth(s),
+	).Post("/hooks/inoreader", h.InoreaderWebhook)
 
 	r.Route("/api/v1", func(r chi.Router) {
 		r.Use(middleware.PerIPRateLimit(10, 20))
