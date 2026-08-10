@@ -48,6 +48,10 @@ Page({
       wx.showToast({ title, icon: 'success' })
       setTimeout(() => {
         const pages = getCurrentPages()
+        const prevPage = pages[pages.length - 2]
+        if (prevPage && prevPage.markNeedsRefresh) {
+          prevPage.markNeedsRefresh()
+        }
         if (pages.length > 1) {
           wx.navigateBack()
         } else {

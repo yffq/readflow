@@ -14,9 +14,18 @@ Page({
     error: ''
   },
 
+  _initialized: false,
+  _needsRefresh: false,
+
   onShow() {
     if (!app.checkSettings()) return
-    this.loadArticles()
+    if (!this._initialized) {
+      this._initialized = true
+      this.loadArticles()
+    } else if (this._needsRefresh) {
+      this._needsRefresh = false
+      this.loadArticles(false)
+    }
   },
 
   onPullDownRefresh() {
@@ -104,6 +113,16 @@ Page({
       this.setData({ articles: previousArticles, total: previousTotal })
       wx.showToast({ title: 'Failed', icon: 'none' })
     })
+  },
+
+  onArticleDeleted(id) {
+    const articles = this.data.articles.filter(a => a.id !== id)
+    const removed = this.data.articles.length - articles.length
+    this.setData({ articles, total: Math.max(0, this.data.total - removed) })
+  },
+
+  markNeedsRefresh() {
+    this._needsRefresh = true
   },
 
   prevPage() {

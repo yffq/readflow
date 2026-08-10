@@ -96,6 +96,11 @@ Page({
     if (!id) return
     api.deleteArticles([id]).then(() => {
       wx.showToast({ title: 'Deleted', icon: 'success' })
+      const pages = getCurrentPages()
+      const prevPage = pages[pages.length - 2]
+      if (prevPage && prevPage.onArticleDeleted) {
+        prevPage.onArticleDeleted(id)
+      }
       setTimeout(() => wx.navigateBack(), 800)
     }).catch(err => {
       wx.showToast({
