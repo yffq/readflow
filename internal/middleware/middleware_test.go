@@ -3,6 +3,7 @@ package middleware
 import (
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/alexedwards/scs/v2"
@@ -142,6 +143,27 @@ func TestAPIKeyFromRequest(t *testing.T) {
 				t.Fatalf("expected %q, got %q", tt.want, got)
 			}
 		})
+	}
+}
+
+func TestRedactAPIKeyQuery(t *testing.T) {
+	req := httptest.NewRequest("GET", "/api/test?api_key=rf_secret&limit=10", nil)
+	rec := httptest.NewRecorder()
+	handler := RedactAPIKeyQuery(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if strings.Contains(r.URL.RawQuery, "api_key") || strings.Contains(r.RequestURI, "rf_secret") {
+			t.Fatalf("API key was not redacted: %s", r.RequestURI)
+		}
+		if r.URL.Query().Get("limit") != "10" {
+			t.Fatal("non-sensitive query parameter was removed")
+		}
+		if APIKeyFromRequest(r) != "rf_secret" {
+			t.Fatal("redacted API key was not available to authentication")
+		}
+		w.WriteHeader(http.StatusNoContent)
+	}))
+	handler.ServeHTTP(rec, req)
+	if rec.Code != http.StatusNoContent {
+		t.Fatalf("expected 204, got %d", rec.Code)
 	}
 }
 

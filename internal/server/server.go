@@ -57,6 +57,7 @@ func New(dbPath string) (*Server, error) {
 
 	r.Use(chimw.RequestID)
 	r.Use(chimw.RealIP)
+	r.Use(middleware.RedactAPIKeyQuery)
 	r.Use(chimw.Logger)
 	r.Use(chimw.Recoverer)
 	r.Use(middleware.SecureHeaders)
@@ -97,6 +98,7 @@ func New(dbPath string) (*Server, error) {
 		r.Use(middleware.APIKeyAuth(s))
 
 		r.Post("/save", h.APISave)
+		r.Post("/webhooks/inoreader", h.InoreaderWebhook)
 		r.Get("/export", h.APIExport)
 		r.Get("/article/{id}", h.APIReadArticle)
 		r.Get("/read/{id}", h.ReadMobilePage)

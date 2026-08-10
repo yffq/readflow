@@ -2,6 +2,8 @@ package server
 
 import (
 	"bytes"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"io"
 	"net/http"
@@ -122,6 +124,85 @@ func TestServerIntegration(t *testing.T) {
 		resp := doRequest(t, client, ts.URL+"/api/v1/export", "GET", nil, nil)
 		if resp.StatusCode != http.StatusUnauthorized {
 			t.Fatalf("expected 401 without auth, got %d", resp.StatusCode)
+		}
+	})
+
+	t.Run("InoreaderWebhook_Auth", func(t *testing.T) {
+		client := newClient()
+		body := strings.NewReader("{\"items\":[{\"title\":\"From Inoreader\",\"canonical\":[{\"href\":\"https://example.com/webhook-route\"}],\"summary\":{\"content\":\"<p>Webhook body</p>\"}}]}")
+		resp := doRequest(t, client, ts.URL+"/api/v1/webhooks/inoreader", "POST", map[string]string{
+			"Content-Type": "application/json",
+		}, body)
+		if resp.StatusCode != http.StatusUnauthorized {
+			t.Fatalf("expected 401 without API key, got %d", resp.StatusCode)
+		}
+
+		rawKey := "rf_inoreader_test_key"
+		hash := sha256.Sum256([]byte(rawKey))
+		userExists, err := srv.store.UserExists()
+		if err != nil {
+			t.Fatalf("check test user: %v", err)
+		}
+		if !userExists {
+			if _, err := srv.store.CreateUser("inoreader-test-password"); err != nil {
+				t.Fatalf("create webhook test user: %v", err)
+			}
+		}
+		if err := srv.store.CreateAPIKey("default", rawKey[:11], hex.EncodeToString(hash[:]), "Inoreader"); err != nil {
+			t.Fatalf("create webhook API key: %v", err)
+		}
+		body = strings.NewReader("{\"items\":[{\"title\":\"From Inoreader\",\"canonical\":[{\"href\":\"https://example.com/webhook-route\"}],\"summary\":{\"content\":\"<p>Webhook body</p>\"}}]}")
+		resp = doRequest(t, client, ts.URL+"/api/v1/webhooks/inoreader?api_key="+url.QueryEscape(rawKey), "POST", map[string]string{
+			"Content-Type": "application/json",
+		}, body)
+		if resp.StatusCode != http.StatusOK {
+			responseBody, err := io.ReadAll(resp.Body)
+			if err != nil {
+				t.Fatalf("read webhook response: %v", err)
+			}
+			t.Fatalf("expected 200 with API key, got %d: %s", resp.StatusCode, responseBody)
+		}
+		var webhookResponse struct {
+			Created    int `json:"created"`
+			Duplicates int `json:"duplicates"`
+			Failed     int `json:"failed"`
+		}
+		if err := json.NewDecoder(resp.Body).Decode(&webhookResponse); err != nil {
+			t.Fatalf("decode webhook response: %v", err)
+		}
+		resp.Body.Close()
+		if webhookResponse.Created != 1 || webhookResponse.Duplicates != 0 || webhookResponse.Failed != 0 {
+			t.Fatalf("unexpected webhook response: %+v", webhookResponse)
+		}
+
+		resp = doRequest(t, client, ts.URL+"/api/v1/export?api_key="+url.QueryEscape(rawKey), "GET", nil, nil)
+		if resp.StatusCode != http.StatusOK {
+			t.Fatalf("export after webhook: expected 200, got %d", resp.StatusCode)
+		}
+		var exported model.ExportResponse
+		if err := json.NewDecoder(resp.Body).Decode(&exported); err != nil {
+			t.Fatalf("decode exported articles: %v", err)
+		}
+		resp.Body.Close()
+		if len(exported.Results) != 1 {
+			t.Fatalf("expected one exported article, got %d", len(exported.Results))
+		}
+		article := exported.Results[0]
+		if article.Title != "From Inoreader" || article.URL != "https://example.com/webhook-route" ||
+			article.Source != "inoreader" || !strings.Contains(article.ContentMarkdown, "Webhook body") {
+			t.Fatalf("unexpected exported article: %+v", article)
+		}
+
+		body = strings.NewReader("{\"items\":[{\"title\":\"From Inoreader\",\"canonical\":[{\"href\":\"https://example.com/webhook-route\"}],\"summary\":{\"content\":\"<p>Webhook body</p>\"}}]}")
+		resp = doRequest(t, client, ts.URL+"/api/v1/webhooks/inoreader?api_key="+url.QueryEscape(rawKey), "POST", map[string]string{
+			"Content-Type": "application/json",
+		}, body)
+		if err := json.NewDecoder(resp.Body).Decode(&webhookResponse); err != nil {
+			t.Fatalf("decode duplicate webhook response: %v", err)
+		}
+		resp.Body.Close()
+		if webhookResponse.Created != 0 || webhookResponse.Duplicates != 1 || webhookResponse.Failed != 0 {
+			t.Fatalf("unexpected duplicate webhook response: %+v", webhookResponse)
 		}
 	})
 }

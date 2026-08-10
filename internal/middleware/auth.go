@@ -13,6 +13,7 @@ import (
 type contextKey string
 
 const ContextUserID contextKey = "user_id"
+const contextAPIKey contextKey = "api_key"
 
 func AuthRequired(sm *scs.SessionManager) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
@@ -69,7 +70,11 @@ func APIKeyAuth(s *store.Store) func(http.Handler) http.Handler {
 func APIKeyFromRequest(r *http.Request) string {
 	auth := strings.TrimSpace(r.Header.Get("Authorization"))
 	if auth == "" {
-		auth = strings.TrimSpace(r.URL.Query().Get("api_key"))
+		if key, ok := r.Context().Value(contextAPIKey).(string); ok {
+			auth = strings.TrimSpace(key)
+		} else {
+			auth = strings.TrimSpace(r.URL.Query().Get("api_key"))
+		}
 	}
 	if auth == "" {
 		return ""
@@ -81,6 +86,23 @@ func APIKeyFromRequest(r *http.Request) string {
 		return auth
 	}
 	return ""
+}
+
+func RedactAPIKeyQuery(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		key := strings.TrimSpace(r.URL.Query().Get("api_key"))
+		if key == "" {
+			next.ServeHTTP(w, r)
+			return
+		}
+
+		query := r.URL.Query()
+		query.Del("api_key")
+		r.URL.RawQuery = query.Encode()
+		r.RequestURI = r.URL.RequestURI()
+		ctx := context.WithValue(r.Context(), contextAPIKey, key)
+		next.ServeHTTP(w, r.WithContext(ctx))
+	})
 }
 
 func SecureHeaders(next http.Handler) http.Handler {
