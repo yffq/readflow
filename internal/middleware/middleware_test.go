@@ -167,6 +167,24 @@ func TestRedactAPIKeyQuery(t *testing.T) {
 	}
 }
 
+func TestRedactInoreaderPathAPIKey(t *testing.T) {
+	req := httptest.NewRequest("POST", "/api/v1/webhooks/inoreader/rf_secret", nil)
+	rec := httptest.NewRecorder()
+	handler := RedactAPIKeyQuery(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/api/v1/webhooks/inoreader" || strings.Contains(r.RequestURI, "rf_secret") {
+			t.Fatalf("API key path was not redacted: %s", r.RequestURI)
+		}
+		if APIKeyFromRequest(r) != "rf_secret" {
+			t.Fatal("path API key was not available to authentication")
+		}
+		w.WriteHeader(http.StatusNoContent)
+	}))
+	handler.ServeHTTP(rec, req)
+	if rec.Code != http.StatusNoContent {
+		t.Fatalf("expected 204, got %d", rec.Code)
+	}
+}
+
 func TestRateLimit(t *testing.T) {
 	handler := PerIPRateLimit(2, 3)(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte("ok"))

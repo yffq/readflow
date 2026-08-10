@@ -91,6 +91,15 @@ func APIKeyFromRequest(r *http.Request) string {
 func RedactAPIKeyQuery(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		key := strings.TrimSpace(r.URL.Query().Get("api_key"))
+		const inoreaderPrefix = "/api/v1/webhooks/inoreader/"
+		if strings.HasPrefix(r.URL.Path, inoreaderPrefix) {
+			pathKey := strings.TrimSpace(strings.TrimPrefix(r.URL.Path, inoreaderPrefix))
+			if pathKey != "" && !strings.Contains(pathKey, "/") {
+				key = pathKey
+				r.URL.Path = strings.TrimSuffix(inoreaderPrefix, "/")
+				r.URL.RawPath = ""
+			}
+		}
 		if key == "" {
 			next.ServeHTTP(w, r)
 			return

@@ -152,7 +152,7 @@ func TestServerIntegration(t *testing.T) {
 			t.Fatalf("create webhook API key: %v", err)
 		}
 		body = strings.NewReader("{\"items\":[{\"title\":\"From Inoreader\",\"canonical\":[{\"href\":\"https://example.com/webhook-route\"}],\"summary\":{\"content\":\"<p>Webhook body</p>\"}}]}")
-		resp = doRequest(t, client, ts.URL+"/api/v1/webhooks/inoreader?api_key="+url.QueryEscape(rawKey), "POST", map[string]string{
+		resp = doRequest(t, client, ts.URL+"/api/v1/webhooks/inoreader/"+url.PathEscape(rawKey), "POST", map[string]string{
 			"Content-Type": "application/json",
 		}, body)
 		if resp.StatusCode != http.StatusOK {
@@ -194,7 +194,7 @@ func TestServerIntegration(t *testing.T) {
 		}
 
 		body = strings.NewReader("{\"items\":[{\"title\":\"From Inoreader\",\"canonical\":[{\"href\":\"https://example.com/webhook-route\"}],\"summary\":{\"content\":\"<p>Webhook body</p>\"}}]}")
-		resp = doRequest(t, client, ts.URL+"/api/v1/webhooks/inoreader?api_key="+url.QueryEscape(rawKey), "POST", map[string]string{
+		resp = doRequest(t, client, ts.URL+"/api/v1/webhooks/inoreader/"+url.PathEscape(rawKey), "POST", map[string]string{
 			"Content-Type": "application/json",
 		}, body)
 		if err := json.NewDecoder(resp.Body).Decode(&webhookResponse); err != nil {
