@@ -35,10 +35,14 @@
   font-size: 13px;
 }
 
-.btn-primary,
-.btn-secondary {
+.btn-primary {
   width: 100%;
   height: 44px;
+  line-height: 44px;
+  white-space: nowrap;
+  overflow: hidden;
+  padding: 0 12px;
+  box-sizing: border-box;
   border-radius: 8px;
   font-size: 16px;
 }
@@ -50,9 +54,3 @@
   margin-top: 10px;
 }
 
-.btn-secondary {
-  margin-top: 12px;
-  background: #262626;
-  color: #c5c0b8;
-  border: 1px solid #333;
-}

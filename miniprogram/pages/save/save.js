@@ -19,17 +19,6 @@ Page({
     this.setData({ url: e.detail.value, error: '' })
   },
 
-  pasteFromClipboard() {
-    wx.getClipboardData({
-      success: (res) => {
-        this.setData({ url: (res.data || '').trim(), error: '' })
-      },
-      fail: () => {
-        this.showError('Failed to read clipboard')
-      }
-    })
-  },
-
   saveArticle() {
     const url = this.data.url.trim()
     if (!url) {

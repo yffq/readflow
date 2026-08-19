@@ -1,0 +1,10 @@
+{
+  "name": "readflow-share",
+  "miniVersion": "v1",
+  "mini-android": {
+    "projectPath": "android"
+  },
+  "mini-ios": {
+    "projectPath": "ios"
+  }
+}

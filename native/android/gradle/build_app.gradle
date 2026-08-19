@@ -1,0 +1,95 @@
+import groovy.json.JsonSlurper
+
+// 定义一个task来处理JSON配置
+def processConfig(Project project) {
+    // 定义JSON文件路径
+    def configFilePath = 'plugin.config.json'
+    def configFile = project.file(configFilePath)
+
+    // 检查文件是否存在
+    if (!configFile.exists()) {
+        logger.log(LogLevel.WARN, "[I] Configuration file '$configFilePath' does not exist. Skipping config processing.")
+//        println "[I] Configuration file '$configFilePath' does not exist. Skipping config processing."
+        return
+    }
+
+    try {
+        // 解析JSON文件
+        def configJson = new JsonSlurper().parseText(configFile.text)
+
+        // 合并manifestPlaceholders，如果字段存在
+        configJson.manifestPlaceholders?.each { placeholder ->
+            project.android.defaultConfig.manifestPlaceholders[placeholder.name] = placeholder.value
+        }
+        logger.log(LogLevel.LIFECYCLE, "[I] android.defaultConfig.manifestPlaceholders:${android.defaultConfig.manifestPlaceholders}")
+//        println("[I] android.defaultConfig.manifestPlaceholders:" + android.defaultConfig.manifestPlaceholders)
+
+
+        // 动态加载依赖，如果字段存在
+        configJson.implementation?.each { implementation ->
+            implementation.libs.each { lib ->
+                project.dependencies.add("implementation", "${lib}:${implementation.version}")
+                println("[I] add implementation:" + "${lib}:${implementation.version}")
+            }
+        }
+    } catch (Exception e) {
+//        println "[E] Error parsing '$configFilePath': ${e.message}"
+        throw new GradleException("[E] Error parsing '$configFilePath': ${e.message}")
+    }
+}
+// 将方法暴露给引用此脚本的项目
+ext.processConfig = this.&processConfig
+
+// 遍历上层目录并查找文件
+def findFileInParentDirs(File dir, String fileName, int levels) {
+    def currentDir = dir
+    for (int i = 0; i < levels; i++) {
+        // 检查当前目录是否存在目标文件
+        def targetFile = new File(currentDir, fileName)
+        if (targetFile.exists()) {
+            return currentDir // 返回文件所在的目录
+        }
+        // 移动到上层目录
+        currentDir = currentDir.getParentFile()
+        if (currentDir == null) {
+            break // 如果没有上层目录，退出循环
+        }
+    }
+    return null // 如果未找到文件，返回 null
+}
+
+task updateResource {
+    doFirst {
+        println "[I] start connect with devtools"
+        def url = miniAppPluginConfig.devtoolsResourceUrl
+        def shouldInterrupt = false
+
+        def foundDir = findFileInParentDirs(project.rootDir, 'project.config.json', 2)
+        def projectDir = foundDir?.exists() ? URLEncoder.encode(foundDir.absolutePath, 'UTF-8') : ""
+        def urlString = projectDir ? "${url}?project=${projectDir}" : url
+
+        def response = ""
+        try {
+            println "[I] url: $urlString"
+            response = new URL(urlString).getText()
+            println("[I] response: $response")
+
+            if (response.contains("success")) {
+                // 请求成功
+                println("[I] update Android resource done")
+            } else {
+                shouldInterrupt = true
+            }
+        } catch (Exception e) {
+            println("[W] connecting with devtools fail.." + e.getMessage())
+        }
+
+        if (shouldInterrupt) {
+            def tip = ""
+            if (response != "") {
+                tip = ", please open Weixin DevTools to check msg: " + response
+            }
+            throw new GradleException("update Android resource fail" + tip)
+        }
+    }
+}

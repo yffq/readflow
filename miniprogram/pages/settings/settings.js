@@ -1,4 +1,5 @@
 const app = getApp()
+const { buildSavePath } = require('../../utils/share')
 
 Page({
   data: {
@@ -31,6 +32,15 @@ Page({
     app.globalData.apiUrl = apiUrl
     app.globalData.apiKey = apiKey
     wx.showToast({ title: 'Saved', icon: 'success' })
-    setTimeout(() => wx.redirectTo({ url: '/pages/index/index' }), 1000)
+    setTimeout(() => {
+      const pending = app.globalData.pendingShareUrl
+      if (pending) {
+        // 设置前有未处理的分享 URL，设置完成后直接进入保存页
+        app.globalData.pendingShareUrl = ''
+        wx.redirectTo({ url: buildSavePath(pending) })
+      } else {
+        wx.redirectTo({ url: '/pages/index/index' })
+      }
+    }, 1000)
   }
 })

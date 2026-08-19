@@ -1,0 +1,79 @@
+{
+  "miniVersion": "v2",
+  "name": "%name%",
+  "version": "0.0.1",
+  "versionCode": 100,
+  "i18nFilePath": "i18n",
+  "mini-ohos": {
+    "sdkVersion": "0.5.1"
+  },
+  "mini-android": {
+    "resourcePath": "miniapp/android/nativeResources",
+    "sdkVersion": "1.7.0",
+    "toolkitVersion": "0.11.0",
+    "schemes": {
+      "scheme": "readflow",
+      "appLink": []
+    },
+    "nativePlugins": [
+      {
+        "pluginId": "wxf60ce143ea0fd818",
+        "pluginVersion": "0.0.1",
+        "open": true
+      }
+    ],
+    "useExtendedSdk": {
+      "media": false,
+      "bluetooth": false,
+      "network": false,
+      "scanner": false,
+      "xweb": false
+    },
+    "icons": {
+      "hdpi": "images/icons/icon_hdpi.png",
+      "xhdpi": "images/icons/icon_xhdpi.png",
+      "xxhdpi": "images/icons/icon_xxhdpi.png",
+      "xxxhdpi": "images/icons/icon_xxxhdpi.png"
+    },
+    "splashscreen": {
+      "hdpi": "",
+      "xhdpi": "",
+      "xxhdpi": ""
+    },
+    "enableVConsole": "close",
+    "privacy": {
+      "enable": true
+    }
+  },
+  "mini-ios": {
+    "sdkVersion": "1.7.0",
+    "toolkitVersion": "0.0.9",
+    "useExtendedSdk": {
+      "WeAppOpenFuns": true,
+      "WeAppNetwork": false,
+      "WeAppBluetooth": false,
+      "WeAppMedia": false,
+      "WeAppLBS": false,
+      "WeAppOthers": false
+    },
+    "enableVConsole": "close",
+    "icons": {
+      "mainIcon120": "images/icons/icon_main120.png",
+      "mainIcon180": "images/icons/icon_main180.png",
+      "spotlightIcon80": "images/icons/icon_spotlight80.png",
+      "spotlightIcon120": "images/icons/icon_spotlight120.png",
+      "settingsIcon58": "images/icons/icon_settings58.png",
+      "settingsIcon87": "images/icons/icon_settings87.png",
+      "notificationIcon40": "images/icons/icon_notification40.png",
+      "notificationIcon60": "images/icons/icon_notification60.png",
+      "appStore1024": "images/icons/icon_appstore1024.png"
+    },
+    "splashScreen": {
+      "customImage": ""
+    },
+    "privacy": {
+      "enable": false
+    },
+    "enableOpenUrlNavigate": true
+  }
+}

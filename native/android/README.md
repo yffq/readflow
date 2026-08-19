@@ -1,0 +1,1 @@
+安卓插件开发详细说明请查看[文档](https://developers.weixin.qq.com/miniprogram/dev/platform-capabilities/miniapp/handbook/plugin/androidPlugin.html)

@@ -1,0 +1,56 @@
+{
+  "setting": {
+    "es6": true,
+    "postcss": true,
+    "minified": true,
+    "uglifyFileName": false,
+    "enhance": true,
+    "packNpmRelationList": [],
+    "babelSetting": {
+      "ignore": [],
+      "disablePlugins": [],
+      "outputPath": ""
+    },
+    "useCompilerPlugins": false,
+    "minifyWXML": true
+  },
+  "compileType": "miniprogram",
+  "simulatorPluginLibVersion": {},
+  "packOptions": {
+    "ignore": [
+      {
+        "type": "folder",
+        "value": "android/plugin/build"
+      },
+      {
+        "type": "folder",
+        "value": "android/app/build"
+      },
+      {
+        "type": "folder",
+        "value": "android/localAar"
+      },
+      {
+        "type": "folder",
+        "value": "android/libs"
+      },
+      {
+        "type": "folder",
+        "value": "android/.gradle"
+      },
+      {
+        "type": "folder",
+        "value": "android/compile"
+      },
+      {
+        "type": "folder",
+        "value": "build"
+      }
+    ],
+    "include": []
+  },
+  "appid": "wxf18a7fd5d1c40fef",
+  "miniappPluginId": "wxf60ce143ea0fd818",
+  "editorSetting": {},
+  "projectArchitecture": "multiPlatform"
+}

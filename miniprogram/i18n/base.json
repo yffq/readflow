@@ -1,0 +1,11 @@
+{
+	"ios": {
+		"name": "ReadFlow"
+	},
+	"android": {
+		"name": "ReadFlow"
+	},
+	"common": {
+		"name": "ReadFlow"
+	}
+}

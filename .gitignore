@@ -3,3 +3,19 @@ data/
 readflow
 bin/
 miniprogram/project.private.config.json
+
+# 多端插件（native）构建产物、密钥与本地配置
+native/android/miniapp.json
+native/project.private.config.json
+native/android/local.properties
+native/android/app/sign/
+native/android/compile/
+native/android/libs/
+native/android/localAar/
+native/android/.gradle/
+native/build/
+native/**/build/
+native/ios/
+native/android-share/
+miniprogram/images/icon_source_cropped.png
+miniprogram/images/icon_source_recolored.png

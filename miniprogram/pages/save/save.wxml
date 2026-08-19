@@ -16,6 +16,5 @@
     <button class="btn-primary" loading="{{saving}}" disabled="{{saving}}" bindtap="saveArticle">
       {{saving ? 'Saving...' : 'Save to Read Later'}}
     </button>
-    <button class="btn-secondary" disabled="{{saving}}" bindtap="pasteFromClipboard">Paste Link</button>
   </view>
 </view>
