@@ -4,6 +4,7 @@ import (
 	"context"
 	"log"
 	"os"
+	"time"
 
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/mark3labs/mcp-go/server"
@@ -57,11 +58,19 @@ func newMCPServer(client *Client) *server.MCPServer {
 			if limit <= 0 {
 				limit = 20
 			}
+			if limit > 100 {
+				limit = 100
+			}
 			offset := req.GetInt("offset", 0)
 			if offset < 0 {
 				offset = 0
 			}
 			updatedAfter := req.GetString("updated_after", "")
+			if updatedAfter != "" {
+				if _, err := time.Parse(time.RFC3339, updatedAfter); err != nil {
+					return mcp.NewToolResultError("invalid updated_after: must be RFC3339, e.g. 2024-01-01T00:00:00Z"), nil
+				}
+			}
 
 			data, err := client.ListArticles(ctx, limit, offset, updatedAfter)
 			if err != nil {
