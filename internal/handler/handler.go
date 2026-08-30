@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/rand"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"html/template"
 	"log"
@@ -387,15 +388,26 @@ func (h *Handler) APISave(w http.ResponseWriter, r *http.Request) {
 	h.jsonError(w, http.StatusBadRequest, "either 'url' or 'html' is required")
 }
 
-func (h *Handler) saveURL(w http.ResponseWriter, r *http.Request, req *model.SaveRequest) {
+// SaveArticle saves a URL or HTML article and returns the created article and
+// its status ("created" or "duplicate"). An extraction failure is recorded on
+// the article (ExtractionFailed=true) rather than returned as an error.
+func (h *Handler) SaveArticle(req *model.SaveRequest) (*model.Article, string, error) {
+	if req.HTML != "" {
+		return h.saveHTMLArticle(req)
+	}
+	if req.URL != "" {
+		return h.saveURLArticle(req)
+	}
+	return nil, "", errors.New("either 'url' or 'html' is required")
+}
+
+func (h *Handler) saveURLArticle(req *model.SaveRequest) (*model.Article, string, error) {
 	req.URL = strings.TrimSpace(req.URL)
 	if err := extract.ValidatePublicURL(req.URL); err != nil {
-		h.jsonError(w, http.StatusBadRequest, err.Error())
-		return
+		return nil, "", &urlValidationError{msg: err.Error()}
 	}
 	if id, dup := h.Store.CheckArticleByURL(req.URL); dup {
-		h.jsonResponse(w, http.StatusOK, fmt.Sprintf(`{"id":"%s","status":"duplicate"}`, id))
-		return
+		return &model.Article{ID: id}, "duplicate", nil
 	}
 	article := &model.Article{
 		ID:     newID(),
@@ -422,19 +434,16 @@ func (h *Handler) saveURL(w http.ResponseWriter, r *http.Request, req *model.Sav
 	article.CreatedAt = time.Now()
 	article.UpdatedAt = article.CreatedAt
 	if err := h.Store.CreateArticle(article); err != nil {
-		log.Printf("failed to save article: %v", err)
-		h.jsonError(w, http.StatusInternalServerError, "failed to save article")
-		return
+		return nil, "", err
 	}
-	h.jsonResponse(w, http.StatusOK, fmt.Sprintf(`{"id":"%s","title":"%s","status":"created"}`, article.ID, template.JSEscapeString(article.Title)))
+	return article, "created", nil
 }
 
-func (h *Handler) saveHTML(w http.ResponseWriter, r *http.Request, req *model.SaveRequest) {
+func (h *Handler) saveHTMLArticle(req *model.SaveRequest) (*model.Article, string, error) {
 	req.URL = strings.TrimSpace(req.URL)
 	if req.URL != "" {
 		if err := extract.ValidatePublicURL(req.URL); err != nil {
-			h.jsonError(w, http.StatusBadRequest, err.Error())
-			return
+			return nil, "", &urlValidationError{msg: err.Error()}
 		}
 	}
 	cleaned := sanitize.Sanitize(req.HTML)
@@ -458,12 +467,48 @@ func (h *Handler) saveHTML(w http.ResponseWriter, r *http.Request, req *model.Sa
 		UpdatedAt:   time.Now(),
 	}
 	if err := h.Store.CreateArticle(article); err != nil {
-		log.Printf("failed to save article: %v", err)
-		h.jsonError(w, http.StatusInternalServerError, "failed to save article")
+		return nil, "", err
+	}
+	return article, "created", nil
+}
+
+func (h *Handler) saveURL(w http.ResponseWriter, r *http.Request, req *model.SaveRequest) {
+	article, status, err := h.saveURLArticle(req)
+	if err != nil {
+		h.writeSaveError(w, err)
+		return
+	}
+	if status == "duplicate" {
+		h.jsonResponse(w, http.StatusOK, fmt.Sprintf(`{"id":"%s","status":"duplicate"}`, article.ID))
 		return
 	}
 	h.jsonResponse(w, http.StatusOK, fmt.Sprintf(`{"id":"%s","title":"%s","status":"created"}`, article.ID, template.JSEscapeString(article.Title)))
 }
+
+func (h *Handler) saveHTML(w http.ResponseWriter, r *http.Request, req *model.SaveRequest) {
+	article, _, err := h.saveHTMLArticle(req)
+	if err != nil {
+		h.writeSaveError(w, err)
+		return
+	}
+	h.jsonResponse(w, http.StatusOK, fmt.Sprintf(`{"id":"%s","title":"%s","status":"created"}`, article.ID, template.JSEscapeString(article.Title)))
+}
+
+func (h *Handler) writeSaveError(w http.ResponseWriter, err error) {
+	var verr *urlValidationError
+	if errors.As(err, &verr) {
+		h.jsonError(w, http.StatusBadRequest, verr.Error())
+		return
+	}
+	log.Printf("failed to save article: %v", err)
+	h.jsonError(w, http.StatusInternalServerError, "failed to save article")
+}
+
+// urlValidationError marks URL validation failures so HTTP callers can map
+// them to a 400 response.
+type urlValidationError struct{ msg string }
+
+func (e *urlValidationError) Error() string { return e.msg }
 
 func (h *Handler) APIExport(w http.ResponseWriter, r *http.Request) {
 	updatedAfterStr := r.URL.Query().Get("updated_after")

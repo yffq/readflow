@@ -263,6 +263,48 @@ func TestServerIntegration(t *testing.T) {
 			t.Fatalf("expected webhook token last-used timestamp, got %+v", tokens)
 		}
 	})
+
+	t.Run("MCP", func(t *testing.T) {
+		client := newClient()
+
+		initBody := `{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-11-25","capabilities":{},"clientInfo":{"name":"test","version":"1.0"}}}`
+		resp := doRequest(t, client, ts.URL+"/mcp", "POST", map[string]string{
+			"Content-Type": "application/json",
+		}, strings.NewReader(initBody))
+		if resp.StatusCode != http.StatusUnauthorized {
+			t.Fatalf("mcp without key: expected 401, got %d", resp.StatusCode)
+		}
+		resp.Body.Close()
+
+		rawKey := "rf_mcp_test_key"
+		hash := sha256.Sum256([]byte(rawKey))
+		if err := srv.store.CreateAPIKey("default", rawKey[:11], hex.EncodeToString(hash[:]), "MCP"); err != nil {
+			t.Fatalf("create mcp api key: %v", err)
+		}
+
+		resp = doRequest(t, client, ts.URL+"/mcp", "POST", map[string]string{
+			"Content-Type":  "application/json",
+			"Authorization": "Bearer " + rawKey,
+		}, strings.NewReader(initBody))
+		if resp.StatusCode != http.StatusOK {
+			body, _ := io.ReadAll(resp.Body)
+			t.Fatalf("mcp with key: expected 200, got %d: %s", resp.StatusCode, body)
+		}
+		var initResp struct {
+			Result struct {
+				ServerInfo struct {
+					Name string `json:"name"`
+				} `json:"serverInfo"`
+			} `json:"result"`
+		}
+		if err := json.NewDecoder(resp.Body).Decode(&initResp); err != nil {
+			t.Fatalf("decode mcp init response: %v", err)
+		}
+		resp.Body.Close()
+		if initResp.Result.ServerInfo.Name != "readflow" {
+			t.Fatalf("expected server name readflow, got %q", initResp.Result.ServerInfo.Name)
+		}
+	})
 }
 
 func doRequest(t *testing.T, client *http.Client, url, method string, headers map[string]string, body io.Reader) *http.Response {

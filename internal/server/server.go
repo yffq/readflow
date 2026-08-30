@@ -11,7 +11,9 @@ import (
 	"github.com/alexedwards/scs/v2"
 	"github.com/go-chi/chi/v5"
 	chimw "github.com/go-chi/chi/v5/middleware"
+	mcpserver "github.com/mark3labs/mcp-go/server"
 	"github.com/readflow/readflow/internal/handler"
+	readflowmcp "github.com/readflow/readflow/internal/mcp"
 	"github.com/readflow/readflow/internal/middleware"
 	"github.com/readflow/readflow/internal/store"
 	"github.com/readflow/readflow/internal/store/sessionstore"
@@ -52,6 +54,9 @@ func New(dbPath string) (*Server, error) {
 
 	tmpl := loadTemplates()
 	h := handler.New(s, tmpl, sm)
+
+	mcpServer := readflowmcp.NewServer(s, h.SaveArticle)
+	mcpHTTP := mcpserver.NewStreamableHTTPServer(mcpServer)
 
 	r := chi.NewRouter()
 
@@ -99,6 +104,12 @@ func New(dbPath string) (*Server, error) {
 		middleware.PerIPRateLimit(10, 20),
 		middleware.WebhookTokenAuth(s),
 	).Post("/hooks/inoreader", h.InoreaderWebhook)
+
+	// MCP endpoint for AI assistants, authenticated with an API key.
+	r.With(
+		middleware.PerIPRateLimit(10, 20),
+		middleware.APIKeyAuth(s),
+	).Handle("/mcp", mcpHTTP)
 
 	r.Route("/api/v1", func(r chi.Router) {
 		r.Use(middleware.PerIPRateLimit(10, 20))

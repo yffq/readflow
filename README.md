@@ -185,39 +185,31 @@ Webhook 添加文章，不能读取、导出或删除数据。Webhook URL 只能
 
 ## MCP 服务器（AI 助手接入）
 
-`cmd/readflow-mcp` 是一个 MCP（Model Context Protocol）服务器，让 AI 助手（如
-CodeBuddy、Claude Desktop 等）以只读方式访问 Readflow 的文章列表和正文。
+Readflow 内置一个 MCP（Model Context Protocol）端点，让 AI 助手（如 CodeBuddy、
+Claude Desktop 等）通过远程 HTTP 访问和管理文章，无需额外部署。
 
-### 编译
+### 端点与认证
 
-```bash
-go build -o bin/readflow-mcp ./cmd/readflow-mcp
-```
-
-### 配置
-
-通过环境变量传入服务器地址和 API Key：
-
-```bash
-export READFLOW_BASE_URL=https://your-domain.com
-export READFLOW_API_KEY=rf_xxx...
-./bin/readflow-mcp
-```
+MCP 端点位于 `https://your-domain.com/mcp`，使用 API Key 认证（与 `/api/v1` 相同，
+通过 `Authorization: Bearer rf_xxx...` 请求头传入，API Key 在 Settings 页面生成）。
 
 ### 提供的工具
 
-| 工具 | 说明 |
-|------|------|
-| `list_articles` | 列出文章摘要（不含正文），支持 `limit`/`offset`/`updated_after` 分页 |
-| `get_article` | 按 `id` 读取单篇文章，包含 `content_html` 和 `content_markdown` 全文 |
+| 工具 | 类型 | 说明 |
+|------|------|------|
+| `list_articles` | 读 | 列出文章摘要（不含正文），支持 `limit`/`offset`/`updated_after` 分页 |
+| `get_article` | 读 | 按 `id` 读取单篇文章，包含 `content_html` 和 `content_markdown` 全文 |
+| `save_article` | 写 | 保存文章（URL 或 HTML 全文），返回 `id`/`status` |
+| `delete_article` | 写 | 按 `id` 删除文章 |
 
-两个工具都是只读操作。返回中会把 Readflow 的 `saved_at` 字段归一为 `created_at`，
-与文章详情接口保持一致。
+返回中会把文章的创建时间统一为 `created_at` 字段。
 
 ### CodeBuddy 配置
 
-在 CodeBuddy 的 MCP 配置中注册该 stdio 服务器，并设置上面的两个环境变量即可。
-配置后即可用自然语言让 AI 读取文章，例如「列出我最近保存的文章」「读一下这篇文章的全文」。
+在 CodeBuddy 的 MCP 配置中添加一个远程（HTTP/Streamable）服务器，URL 填
+`https://your-domain.com/mcp`，并配置 `Authorization: Bearer rf_xxx...` 请求头。
+配置后即可用自然语言让 AI 读取和管理文章，例如「列出我最近保存的文章」
+「读一下这篇文章的全文」「保存这个链接」。
 
 ## 开发
 
