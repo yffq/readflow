@@ -183,6 +183,42 @@ Webhook 添加文章，不能读取、导出或删除数据。Webhook URL 只能
 3. 点击文章进入阅读视图，自动适配手机屏幕
 4. 点击原文链接会将 URL 复制到剪贴板
 
+## MCP 服务器（AI 助手接入）
+
+`cmd/readflow-mcp` 是一个 MCP（Model Context Protocol）服务器，让 AI 助手（如
+CodeBuddy、Claude Desktop 等）以只读方式访问 Readflow 的文章列表和正文。
+
+### 编译
+
+```bash
+go build -o bin/readflow-mcp ./cmd/readflow-mcp
+```
+
+### 配置
+
+通过环境变量传入服务器地址和 API Key：
+
+```bash
+export READFLOW_BASE_URL=https://your-domain.com
+export READFLOW_API_KEY=rf_xxx...
+./bin/readflow-mcp
+```
+
+### 提供的工具
+
+| 工具 | 说明 |
+|------|------|
+| `list_articles` | 列出文章摘要（不含正文），支持 `limit`/`offset`/`updated_after` 分页 |
+| `get_article` | 按 `id` 读取单篇文章，包含 `content_html` 和 `content_markdown` 全文 |
+
+两个工具都是只读操作。返回中会把 Readflow 的 `saved_at` 字段归一为 `created_at`，
+与文章详情接口保持一致。
+
+### CodeBuddy 配置
+
+在 CodeBuddy 的 MCP 配置中注册该 stdio 服务器，并设置上面的两个环境变量即可。
+配置后即可用自然语言让 AI 读取文章，例如「列出我最近保存的文章」「读一下这篇文章的全文」。
+
 ## 开发
 
 ```bash
