@@ -211,6 +211,43 @@ MCP 端点位于 `https://your-domain.com/mcp`，使用 API Key 认证（与 `/a
 配置后即可用自然语言让 AI 读取和管理文章，例如「列出我最近保存的文章」
 「读一下这篇文章的全文」「保存这个链接」。
 
+### 给 AI 助手的配置提示词（可直接复制）
+
+如果你的 MCP 客户端是某个 AI 助手（agent），可以把下面这段直接粘贴给它，
+让它帮你完成配置。使用时把 `<你的域名>` 替换成真实域名（`<API_KEY>` 保持
+占位符，由你私下提供，不要在对话里贴完整 key）：
+
+````markdown
+请帮我配置一个远程 MCP 服务器，连接到我的稍后阅读服务 Readflow。
+
+- 协议：Streamable HTTP（远程 HTTP MCP）
+- URL：https://<你的域名>/mcp
+- 认证：请求头 Authorization: Bearer <API_KEY>
+
+mcp.json 配置：
+{
+  "mcpServers": {
+    "readflow": {
+      "type": "http",
+      "url": "https://<你的域名>/mcp",
+      "headers": { "Authorization": "Bearer <API_KEY>" }
+    }
+  }
+}
+
+提供的 4 个工具：
+- list_articles(limit, offset, updated_after?)：列出文章摘要（不含正文）
+- get_article(id)：读取单篇全文
+- save_article(url, html?, title?)：保存文章（url 与 html 二选一必填）
+- delete_article(ids)：删除文章
+
+配置后验证：调用 list_articles 看能否返回列表。
+排错：401 = key 不对或 Authorization 头没传对（注意 "Bearer " 前缀）；
+404 = URL 路径不对（应精确是 /mcp）；连接超时/TLS 错误 = 服务器端问题。
+安全：API key 是敏感凭据，配置后不要回显完整 key；若已明文出现，
+提醒用户去 Readflow 的 Settings 删除并重新生成。
+````
+
 ## 开发
 
 ```bash
