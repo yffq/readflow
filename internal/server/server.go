@@ -48,10 +48,6 @@ func New(dbPath string) (*Server, error) {
 		sm.Cookie.Secure = true
 	}
 
-	if os.Getenv("READFLOW_ENV") == "production" {
-		sm.Cookie.Secure = true
-	}
-
 	tmpl := loadTemplates()
 	h := handler.New(s, tmpl, sm)
 

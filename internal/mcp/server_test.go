@@ -246,3 +246,76 @@ func TestDeleteArticleRequiresIDs(t *testing.T) {
 		t.Fatal("expected error for missing ids")
 	}
 }
+
+func TestDeleteArticleNonExistent(t *testing.T) {
+	s, c := newTestClient(t, nil)
+	seedArticle(t, s, "art-1", "One")
+
+	result, err := c.CallTool(context.Background(), mcp.CallToolRequest{
+		Params: mcp.CallToolParams{
+			Name:      "delete_article",
+			Arguments: map[string]any{"ids": []any{"missing"}},
+		},
+	})
+	if err != nil {
+		t.Fatalf("call delete_article: %v", err)
+	}
+	if result.IsError {
+		t.Fatalf("delete_article error: %v", result.Content)
+	}
+
+	data := result.StructuredContent.(map[string]any)
+	if data["deleted"] != float64(0) {
+		t.Fatalf("expected deleted 0 for missing id, got %v", data["deleted"])
+	}
+
+	got, _ := s.GetArticle("art-1")
+	if got == nil {
+		t.Fatalf("expected art-1 to remain after deleting missing id")
+	}
+}
+
+func TestListArticlesHasMore(t *testing.T) {
+	s, c := newTestClient(t, nil)
+	seedArticle(t, s, "art-1", "One")
+	seedArticle(t, s, "art-2", "Two")
+
+	result, err := c.CallTool(context.Background(), mcp.CallToolRequest{
+		Params: mcp.CallToolParams{
+			Name:      "list_articles",
+			Arguments: map[string]any{"limit": float64(1), "offset": float64(0)},
+		},
+	})
+	if err != nil {
+		t.Fatalf("call list_articles: %v", err)
+	}
+	if result.IsError {
+		t.Fatalf("list_articles error: %v", result.Content)
+	}
+
+	data := result.StructuredContent.(map[string]any)
+	if data["has_more"] != true {
+		t.Fatalf("expected has_more true with limit 1, got %v", data["has_more"])
+	}
+	results := data["results"].([]any)
+	if len(results) != 1 {
+		t.Fatalf("expected 1 result, got %d", len(results))
+	}
+}
+
+func TestGetArticleEmptyID(t *testing.T) {
+	_, c := newTestClient(t, nil)
+
+	result, err := c.CallTool(context.Background(), mcp.CallToolRequest{
+		Params: mcp.CallToolParams{
+			Name:      "get_article",
+			Arguments: map[string]any{"id": ""},
+		},
+	})
+	if err != nil {
+		t.Fatalf("call get_article: %v", err)
+	}
+	if !result.IsError {
+		t.Fatal("expected error for empty id")
+	}
+}

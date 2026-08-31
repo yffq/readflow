@@ -105,7 +105,7 @@ curl "https://your-domain.com/api/v1/export?updated_after=2024-01-01T00:00:00Z&l
       "source": "url",
       "extraction_failed": false,
       "status": "unread",
-      "created_at": "2024-01-01T00:00:00Z",
+      "saved_at": "2024-01-01T00:00:00Z",
       "updated_at": "2024-01-01T00:00:00Z"
     }
   ]

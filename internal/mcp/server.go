@@ -65,7 +65,7 @@ func NewServer(s *store.Store, save SaveFunc) *server.MCPServer {
 				if err != nil {
 					return mcp.NewToolResultError("invalid updated_after: must be RFC3339, e.g. 2024-01-01T00:00:00Z"), nil
 				}
-				updatedAfter = parsed
+				updatedAfter = parsed.UTC()
 			}
 
 			// Fetch limit+1 to detect whether another page exists.
@@ -163,10 +163,11 @@ func NewServer(s *store.Store, save SaveFunc) *server.MCPServer {
 			if len(ids) == 0 {
 				return mcp.NewToolResultError("ids is required"), nil
 			}
-			if err := s.DeleteArticles(ids); err != nil {
+			deleted, err := s.DeleteArticles(ids)
+			if err != nil {
 				return mcp.NewToolResultError(err.Error()), nil
 			}
-			return mcp.NewToolResultJSON(deleteResult{Deleted: len(ids)})
+			return mcp.NewToolResultJSON(deleteResult{Deleted: deleted})
 		},
 	)
 

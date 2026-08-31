@@ -407,6 +407,9 @@ func (h *Handler) saveURLArticle(req *model.SaveRequest) (*model.Article, string
 		return nil, "", &urlValidationError{msg: err.Error()}
 	}
 	if id, dup := h.Store.CheckArticleByURL(req.URL); dup {
+		if existing, err := h.Store.GetArticle(id); err == nil && existing != nil {
+			return existing, "duplicate", nil
+		}
 		return &model.Article{ID: id}, "duplicate", nil
 	}
 	article := &model.Article{
@@ -428,7 +431,11 @@ func (h *Handler) saveURLArticle(req *model.SaveRequest) (*model.Article, string
 		cleaned := sanitize.Sanitize(result.Content)
 		article.ContentHTML = cleaned
 		converter := md.NewConverter("", true, nil)
-		markdown, _ := converter.ConvertString(cleaned)
+		markdown, convErr := converter.ConvertString(cleaned)
+		if convErr != nil {
+			log.Printf("convert article to markdown: %v", convErr)
+			markdown = ""
+		}
 		article.ContentMD = markdown
 	}
 	article.CreatedAt = time.Now()
@@ -452,7 +459,11 @@ func (h *Handler) saveHTMLArticle(req *model.SaveRequest) (*model.Article, strin
 		title = "Saved Article"
 	}
 	converter := md.NewConverter("", true, nil)
-	markdown, _ := converter.ConvertString(cleaned)
+	markdown, convErr := converter.ConvertString(cleaned)
+	if convErr != nil {
+		log.Printf("convert article to markdown: %v", convErr)
+		markdown = ""
+	}
 	wordCount := countWords(cleaned)
 	article := &model.Article{
 		ID:          newID(),
@@ -663,12 +674,13 @@ func (h *Handler) DeleteArticles(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := h.Store.DeleteArticles(req.IDs); err != nil {
+	deleted, err := h.Store.DeleteArticles(req.IDs)
+	if err != nil {
 		h.jsonError(w, http.StatusInternalServerError, "failed to delete articles")
 		return
 	}
 
-	writeJSON(w, http.StatusOK, map[string]any{"deleted": len(req.IDs)})
+	writeJSON(w, http.StatusOK, map[string]any{"deleted": deleted})
 }
 
 func (h *Handler) APIDeleteArticles(w http.ResponseWriter, r *http.Request) {
@@ -683,11 +695,12 @@ func (h *Handler) APIDeleteArticles(w http.ResponseWriter, r *http.Request) {
 		h.jsonError(w, http.StatusBadRequest, "no article ids provided")
 		return
 	}
-	if err := h.Store.DeleteArticles(req.IDs); err != nil {
+	deleted, err := h.Store.DeleteArticles(req.IDs)
+	if err != nil {
 		h.jsonError(w, http.StatusInternalServerError, "failed to delete articles")
 		return
 	}
-	writeJSON(w, http.StatusOK, map[string]any{"deleted": len(req.IDs)})
+	writeJSON(w, http.StatusOK, map[string]any{"deleted": deleted})
 }
 
 func (h *Handler) ReadIframePage(w http.ResponseWriter, r *http.Request) {
