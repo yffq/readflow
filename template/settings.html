@@ -80,6 +80,11 @@
         {{end}}
     </div>
     <div class="settings-section">
+        <h2>指纹登录（Passkey）</h2>
+        <p class="help-text">在手机或电脑上使用指纹 / Face ID / Windows Hello 登录，无需输入密码。</p>
+        <button type="button" class="btn-primary" onclick="registerPasskey()">添加指纹登录</button>
+    </div>
+    <div class="settings-section">
         <h2>API Usage</h2>
         <div class="api-doc">
             <h3>Save Article</h3>
@@ -121,4 +126,5 @@ function copyKey(el) {
     });
 }
 </script>
+<script src="/static/webauthn.js"></script>
 {{template "footer" .}}{{end}}

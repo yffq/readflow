@@ -1,6 +1,7 @@
 package server
 
 import (
+	"fmt"
 	"html/template"
 	"net/http"
 	"os"
@@ -30,12 +31,15 @@ func New(dbPath string) (*Server, error) {
 		return nil, err
 	}
 
-	migrationsSQL, err := os.ReadFile(filepath.Join(findProjectRoot(), "migrations", "001_init.sql"))
-	if err != nil {
-		return nil, err
-	}
-	if err := s.Migrate(string(migrationsSQL)); err != nil {
-		return nil, err
+	migrationFiles := []string{"001_init.sql", "002_webauthn.sql"}
+	for _, f := range migrationFiles {
+		migrationsSQL, err := os.ReadFile(filepath.Join(findProjectRoot(), "migrations", f))
+		if err != nil {
+			return nil, fmt.Errorf("read migration %s: %w", f, err)
+		}
+		if err := s.Migrate(string(migrationsSQL)); err != nil {
+			return nil, fmt.Errorf("run migration %s: %w", f, err)
+		}
 	}
 
 	sm := scs.New()
@@ -75,6 +79,10 @@ func New(dbPath string) (*Server, error) {
 		r.Get("/login", h.LoginPage)
 		r.With(middleware.PerIPRateLimit(0.5, 5)).Post("/login", h.Login)
 
+		// Passkey (WebAuthn) login endpoints, available before authentication.
+		r.Post("/webauthn/login/begin", h.WebAuthnLoginBegin)
+		r.Post("/webauthn/login/finish", h.WebAuthnLoginFinish)
+
 		r.Group(func(r chi.Router) {
 			r.Use(middleware.AuthRequired(sm))
 
@@ -93,6 +101,12 @@ func New(dbPath string) (*Server, error) {
 			r.Post("/delete-webhook-token/{id}", h.DeleteWebhookToken)
 			r.Post("/delete/{id}", h.DeleteArticle)
 			r.Post("/delete-batch", h.DeleteArticles)
+
+			// Passkey (WebAuthn) registration and management.
+			r.Post("/webauthn/register/begin", h.WebAuthnRegisterBegin)
+			r.Post("/webauthn/register/finish", h.WebAuthnRegisterFinish)
+			r.Get("/webauthn/credentials", h.WebAuthnCredentials)
+			r.Delete("/webauthn/credentials/{id}", h.WebAuthnCredentialDelete)
 		})
 	})
 
