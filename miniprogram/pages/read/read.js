@@ -1,4 +1,6 @@
 const api = require('../../utils/api')
+const { canOpenExternalUrl } = require('../../utils/env')
+const { openExternalUrl } = require('../../utils/open')
 const app = getApp()
 
 const BLOCK_TAGS = ['p', 'div', 'section', 'article', 'main']
@@ -44,11 +46,26 @@ Page({
   onLinkTap(e) {
     const url = e.currentTarget.dataset.url
     if (!url) return
+
+    const canOpen = canOpenExternalUrl()
+    const itemList = canOpen
+      ? ['Open in Browser', 'Save to Read Later', 'Copy Link']
+      : ['Save to Read Later', 'Copy Link']
+
     wx.showActionSheet({
-      itemList: ['Save to Read Later', 'Copy Link'],
+      itemList,
       success: (res) => {
-        if (res.tapIndex === 0) this.saveLink(url)
-        if (res.tapIndex === 1) this.copyLink(url)
+        const i = res.tapIndex
+        if (canOpen && i === 0) {
+          openExternalUrl(url)
+          return
+        }
+        const saveIndex = canOpen ? 1 : 0
+        if (i === saveIndex) {
+          this.saveLink(url)
+          return
+        }
+        this.copyLink(url)
       }
     })
   },
