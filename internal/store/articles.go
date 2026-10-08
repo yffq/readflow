@@ -2,10 +2,13 @@ package store
 
 import (
 	"database/sql"
+	"strings"
 	"time"
 
 	"github.com/readflow/readflow/internal/model"
 )
+
+const timeLayout = "2006-01-02 15:04:05.000000000"
 
 func (s *Store) CreateArticle(a *model.Article) error {
 	_, err := s.db.Exec(`
@@ -13,9 +16,49 @@ func (s *Store) CreateArticle(a *model.Article) error {
 		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 	`,
 		a.ID, a.Title, a.URL, a.ContentHTML, a.ContentMD, a.Author, a.SiteName,
-		a.WordCount, a.Source, boolToInt(a.ExtractionFailed), a.Status, a.CreatedAt, a.UpdatedAt,
+		a.WordCount, a.Source, boolToInt(a.ExtractionFailed), a.Status,
+		a.CreatedAt.UTC().Format(timeLayout), a.UpdatedAt.UTC().Format(timeLayout),
 	)
 	return err
+}
+
+// NormalizeArticleTimestamps 将历史遗留的时间戳统一转换为固定宽度、UTC 的
+// timeLayout 字符串，保证 updated_at 的字符串比较正确。
+func (s *Store) NormalizeArticleTimestamps() error {
+	rows, err := s.db.Query("SELECT id, created_at, updated_at FROM articles")
+	if err != nil {
+		return err
+	}
+
+	type item struct {
+		id, createdAt, updatedAt string
+	}
+	var items []item
+	for rows.Next() {
+		var it item
+		if err := rows.Scan(&it.id, &it.createdAt, &it.updatedAt); err != nil {
+			rows.Close()
+			return err
+		}
+		items = append(items, it)
+	}
+	if err := rows.Err(); err != nil {
+		rows.Close()
+		return err
+	}
+	// 先释放连接：MaxOpenConns(1) 下，后续 UPDATE 需要复用同一条连接
+	rows.Close()
+
+	for _, it := range items {
+		c := parseTime(it.createdAt).UTC().Format(timeLayout)
+		u := parseTime(it.updatedAt).UTC().Format(timeLayout)
+		if c != it.createdAt || u != it.updatedAt {
+			if _, err := s.db.Exec("UPDATE articles SET created_at = ?, updated_at = ? WHERE id = ?", c, u, it.id); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
 }
 
 func (s *Store) GetArticle(id string) (*model.Article, error) {
@@ -87,7 +130,7 @@ func (s *Store) ListArticles(status string, limit, offset int, asc bool) ([]mode
 }
 
 func (s *Store) UpdateArticleStatus(id, status string) error {
-	_, err := s.db.Exec("UPDATE articles SET status = ?, updated_at = datetime('now') WHERE id = ?", status, id)
+	_, err := s.db.Exec("UPDATE articles SET status = ?, updated_at = ? WHERE id = ?", status, time.Now().UTC().Format(timeLayout), id)
 	return err
 }
 
@@ -126,6 +169,12 @@ func (s *Store) CheckArticleByURL(url string) (string, bool) {
 }
 
 func parseTime(s string) time.Time {
+	s = strings.TrimSpace(s)
+	// 扫描时 modernc 驱动会把时间串解析为 time.Time，database/sql 再格式化为 RFC3339Nano 字符串
+	if t, err := time.Parse(time.RFC3339Nano, s); err == nil {
+		return t
+	}
+	// 兜底：SQLite datetime('now') 的原始格式（UTC）
 	if t, err := time.Parse("2006-01-02 15:04:05", s); err == nil {
 		return t
 	}

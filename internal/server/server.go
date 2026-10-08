@@ -41,6 +41,9 @@ func New(dbPath string) (*Server, error) {
 			return nil, fmt.Errorf("run migration %s: %w", f, err)
 		}
 	}
+	if err := s.NormalizeArticleTimestamps(); err != nil {
+		return nil, fmt.Errorf("normalize article timestamps: %w", err)
+	}
 
 	sm := scs.New()
 	sm.Store = sessionstore.New(s.DB())

@@ -16,11 +16,11 @@ func (s *Store) ListArticlesSince(updatedAfter time.Time, limit, offset int, asc
 	querySQL := `SELECT id, title, url, content_html, content_md, author, site_name, word_count, source, extraction_failed, status, created_at, updated_at
 		FROM articles WHERE updated_at > ? ORDER BY updated_at ` + order + ` LIMIT ? OFFSET ?`
 
-	if err := s.db.QueryRow(countSQL, updatedAfter.Format("2006-01-02 15:04:05")).Scan(&count); err != nil {
+	if err := s.db.QueryRow(countSQL, updatedAfter.UTC().Format(timeLayout)).Scan(&count); err != nil {
 		return nil, 0, err
 	}
 
-	rows, err := s.db.Query(querySQL, updatedAfter.Format("2006-01-02 15:04:05"), limit, offset)
+	rows, err := s.db.Query(querySQL, updatedAfter.UTC().Format(timeLayout), limit, offset)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -53,11 +53,11 @@ func (s *Store) ListArticleSummariesSince(updatedAfter time.Time, limit, offset 
 	querySQL := `SELECT id, title, url, author, site_name, word_count, source, extraction_failed, status, created_at, updated_at
 		FROM articles WHERE updated_at > ? ORDER BY updated_at ` + order + ` LIMIT ? OFFSET ?`
 
-	if err := s.db.QueryRow(countSQL, updatedAfter.Format("2006-01-02 15:04:05")).Scan(&count); err != nil {
+	if err := s.db.QueryRow(countSQL, updatedAfter.UTC().Format(timeLayout)).Scan(&count); err != nil {
 		return nil, 0, err
 	}
 
-	rows, err := s.db.Query(querySQL, updatedAfter.Format("2006-01-02 15:04:05"), limit, offset)
+	rows, err := s.db.Query(querySQL, updatedAfter.UTC().Format(timeLayout), limit, offset)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -88,7 +88,7 @@ func (s *Store) ListArticleSummaryPageSince(updatedAfter time.Time, limit, offse
 	querySQL := `SELECT id, title, url, author, site_name, word_count, source, extraction_failed, status, created_at, updated_at
 		FROM articles WHERE updated_at > ? ORDER BY updated_at ` + order + ` LIMIT ? OFFSET ?`
 
-	rows, err := s.db.Query(querySQL, updatedAfter.Format("2006-01-02 15:04:05"), limit, offset)
+	rows, err := s.db.Query(querySQL, updatedAfter.UTC().Format(timeLayout), limit, offset)
 	if err != nil {
 		return nil, err
 	}
